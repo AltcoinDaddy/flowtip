@@ -1,0 +1,110 @@
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 158 84% 15%; /* Deep green background */
+    --foreground: 0 0% 100%; /* White text */
+
+    --card: 160 80% 20%; /* Dark green card background */
+    --card-foreground: 0 0% 100%; /* White text */
+
+    --popover: 160 80% 20%; /* Dark green popover */
+    --popover-foreground: 0 0% 100%; /* White text */
+
+    --primary: 160 84% 39%; /* Emerald-500 */
+    --primary-foreground: 0 0% 100%; /* White text */
+
+    --secondary: 160 71% 19%; /* Emerald-800 */
+    --secondary-foreground: 0 0% 100%; /* White text */
+
+    --muted: 161 100% 15%; /* Deep green background */
+    --muted-foreground: 210 40% 96.1%; /* Light gray text */
+
+    --accent: 160 84% 39%; /* Emerald-500 */
+    --accent-foreground: 0 0% 100%; /* White text */
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%; /* White text */
+
+    --border: 160 71% 25%; /* Darker emerald border */
+    --input: 160 71% 25%; /* Darker emerald input */
+    --ring: 160 84% 39%; /* Emerald-500 ring */
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 160 80% 20%; /* Dark green */
+    --sidebar-foreground: 0 0% 100%; /* White text */
+    --sidebar-primary: 160 84% 39%; /* Emerald-500 */
+    --sidebar-primary-foreground: 0 0% 100%; /* White text */
+    --sidebar-accent: 161 100% 15%; /* Deep green */
+    --sidebar-accent-foreground: 0 0% 100%; /* White text */
+    --sidebar-border: 160 71% 25%; /* Darker emerald border */
+    --sidebar-ring: 160 84% 39%; /* Emerald-500 ring */
+  }
+
+  .dark {
+    --background: 160 80% 14%;
+    --foreground: 0 0% 100%;
+
+    --card: 160 80% 14%;
+    --card-foreground: 0 0% 100%;
+
+    --popover: 160 80% 14%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 160 71% 20%;
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 160 71% 20%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 160 71% 20%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 160 71% 25%;
+    --input: 160 71% 25%;
+    --ring: 212.7 26.8% 83.9%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-blockchain-dark-green text-foreground;
+  }
+  
+  .gradient-text {
+    @apply text-transparent bg-clip-text bg-gradient-to-r from-emerald-500 to-emerald-400;
+  }
+  
+  .card-hover {
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
+  }
+  
+  .blur-backdrop {
+    @apply backdrop-blur-xl bg-blockchain-green/70;
+  }
+  
+  .button-accent {
+    @apply bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-3 rounded-md font-medium transition-all;
+  }
+  
+  .button-outline {
+    @apply border border-emerald-500 text-emerald-500 hover:bg-emerald-500 hover:text-white px-6 py-3 rounded-md font-medium transition-all;
+  }
+  
+  .section {
+    @apply py-16 md:py-24;
+  }
+}

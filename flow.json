@@ -1,0 +1,55 @@
+{
+"contracts": {
+    "FlowTip": {
+      "source": "./cadence/contracts/flow-tip.cdc",
+      "aliases": {
+        "emulator": "0xf8d6e0586b0a20c7",
+        "testnet": "0x6c1b12e35dca8863",
+        "mainnet": "0x6c1b12e35dca8863"
+      }
+    },
+    "FlowToken": {
+      "aliases": {
+        "emulator": "0x0ae53cb6e3f42a79",
+        "testnet": "0x7e60df042a9c0868",
+        "mainnet": "0x1654653399040a61"
+      }
+    },
+    "FungibleToken": {
+      "aliases": {
+        "emulator": "0x9a0766d93b6608b7",
+        "testnet": "0x631e88ae7f1d7c20",
+        "mainnet": "0xf233dcee88fe0abe"
+      }
+    }
+  },
+  "networks": {
+    "emulator": "127.0.0.1:3569",
+    "testnet": "access.devnet.nodes.onflow.org:9000",
+    "mainnet": "access.mainnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "emulator-account": {
+      "address": "0xf8d6e0586b0a20c7",
+      "key": "dd72967fd2bd75234ae9037dd4694c1f00baad63a10c35172bf65fbb8ad74b47"
+    },
+    "mainnet-deployer": {
+      "address": "0x6c1b12e35dca8863",
+      "key": {
+        "type": "hex",
+        "index": 0,
+        "signatureAlgorithm": "ECDSA_secp256k1",
+        "hashAlgorithm": "SHA2_256",
+        "privateKey": "fc70ba19eb6aefe4546cb04cd6a817ee188890df7660d25c43b29b336258f488"
+      }
+    }
+  },
+  "deployments": {
+    "emulator": {
+      "emulator-account": ["FlowTip"]
+    },
+    "mainnet": {
+      "mainnet-deployer": ["FlowTip"]
+    }
+  }
+}
