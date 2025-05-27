@@ -37,6 +37,35 @@ access(all) contract FlowTip {
             self.totalTipped = self.totalTipped + amount
         }
 
+        // 🆕 NEW: Withdraw tips function
+        access(all) fun withdraw(amount: UFix64) {
+            pre {
+                amount > 0.0: "Withdrawal amount must be greater than 0"
+                amount <= self.totalTipped: "Insufficient balance. Available: ".concat(self.totalTipped.toString()).concat(", Requested: ").concat(amount.toString())
+            }
+            
+            // Reduce the total tipped amount
+            self.totalTipped = self.totalTipped - amount
+            
+            // Emit withdrawal event
+            emit CreatorWithdrawal(
+                creatorID: self.id, 
+                creatorAddress: self.owner?.address, 
+                amount: amount,
+                remainingBalance: self.totalTipped
+            )
+        }
+
+        // 🆕 NEW: Alternative withdrawal function name (in case the modal tries this)
+        access(all) fun withdrawTips(amount: UFix64) {
+            self.withdraw(amount: amount)
+        }
+
+        // 🆕 NEW: Get withdrawable balance (helper function)
+        access(all) fun getWithdrawableBalance(): UFix64 {
+            return self.totalTipped
+        }
+
         // Update profile information
         access(all) fun updateProfile(name: String, description: String, imageURL: String) {
             self.name = name
@@ -77,11 +106,15 @@ access(all) contract FlowTip {
         access(all) var totalTipped: UFix64
         access(all) fun receiveTip(amount: UFix64, from: Address, message: String)
         access(all) fun getTipHistory(): [TipRecord]
+        // 🆕 NEW: Add withdrawal balance function to public interface
+        access(all) fun getWithdrawableBalance(): UFix64
     }
 
     // Public events
     access(all) event CreatorRegistered(id: UInt64, address: Address)
     access(all) event TipSent(creatorID: UInt64, amount: UFix64, from: Address)
+    // 🆕 NEW: Withdrawal event
+    access(all) event CreatorWithdrawal(creatorID: UInt64, creatorAddress: Address?, amount: UFix64, remainingBalance: UFix64)
 
     // Storage paths
     access(all) let CreatorStoragePath: StoragePath
