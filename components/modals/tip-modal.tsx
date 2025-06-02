@@ -120,10 +120,10 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
       <DialogContent className="sm:max-w-lg max-h-[90vh] bg-white/95 backdrop-blur-xl border-0 shadow-2xl overflow-hidden flex flex-col">
         {/* Header */}
         <DialogHeader className="text-center pb-2 flex-shrink-0">
-          <div className="mx-auto w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+          <div className="mx-auto w-16 h-16 bg-gradient-to-br bg-green-600 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
             <Heart className="w-8 h-8 text-white" />
           </div>
-          <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <DialogTitle className="text-2xl font-bold text-green-600 bg-clip-text text-transparent">
             Send a Tip to {creator.name}
           </DialogTitle>
           <p className="text-gray-600 mt-2">Show your appreciation with FLOW tokens</p>
@@ -138,7 +138,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
               <div className="space-y-2">
                 <h3 className="text-2xl font-bold text-gray-900">Tip Sent Successfully!</h3>
                 <p className="text-gray-600">
-                  You sent <span className="font-semibold text-purple-600">{amount} FLOW</span> to{' '}
+                  You sent <span className="font-semibold text-green-600">{amount} FLOW</span> to{' '}
                   <span className="font-semibold">{creator.name}</span>
                 </p>
                 {message && (
@@ -150,7 +150,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
               <div className="flex justify-center pt-4">
                 <Button 
                   onClick={onClose}
-                  className="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white px-8 py-2 rounded-xl font-semibold shadow-lg"
+                  className="bg-green-600 text-white px-8 py-2 rounded-xl font-semibold shadow-lg"
                 >
                   Close
                 </Button>
@@ -178,7 +178,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
                         onClick={() => handleQuickAmount(quickAmount)}
                         className={`py-2 text-sm font-medium transition-all duration-200 ${
                           amount === quickAmount 
-                            ? 'bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-md' 
+                            ? 'bg-gradient-to-r bg-green-600 text-white shadow-md' 
                             : 'hover:bg-purple-50 hover:border-purple-300'
                         }`}
                         disabled={isProcessing}
@@ -198,7 +198,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
                       className={`pl-4 pr-16 py-3 text-lg text-black font-medium border-2 rounded-xl transition-all duration-200 ${
                         validationError 
                           ? 'border-red-300 focus:border-red-500 bg-red-50' 
-                          : 'border-gray-200 focus:border-purple-500 bg-white'
+                          : 'border-gray-200 focus:border-green-500 bg-white'
                       }`}
                       disabled={isProcessing}
                     />
@@ -242,7 +242,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
                     placeholder="Add a personal message with your tip... 💝"
                     rows={3}
                     maxLength={280}
-                    className="border-2 border-gray-200 text-black focus:border-purple-500 rounded-xl p-4 resize-none transition-all duration-200"
+                    className="border-2 border-gray-200 text-black focus:border-green-600 rounded-xl p-4 resize-none transition-all duration-200"
                     disabled={isProcessing}
                   />
                   <div className="text-right text-xs text-gray-500">
@@ -266,7 +266,7 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
               <Button 
                 onClick={handleTip} 
                 disabled={isProcessing || !isValid}
-                className="flex-1 py-3 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="flex-1 py-3 bg-green-500 text-white rounded-xl font-semibold shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 {isProcessing ? (
                   <>
