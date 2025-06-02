@@ -251,7 +251,7 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   <div className="p-3 bg-green-100 rounded-xl">
                     <DollarSign className="w-6 h-6 text-green-600" />
                   </div>
-                  <span className="text-2xl">💰</span>
+                  
                 </div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
                   Total Earned
@@ -269,7 +269,7 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   <div className="p-3 bg-green-100 rounded-xl">
                     <TrendingUp className="w-6 h-6 text-green-600" />
                   </div>
-                  <span className="text-2xl">📊</span>
+                  <span className="text-2xl"></span>
                 </div>
                 <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
                   Average Tip
