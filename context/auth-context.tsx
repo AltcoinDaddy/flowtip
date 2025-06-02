@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import * as fcl from "@onflow/fcl";
 import "../lib/flow/config";
 
@@ -85,30 +85,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const checkIsCreator = async () => {
-    if (!user.addr) return false;
+// Quick fix - check if any creator profile belongs to your address
+const checkIsCreator = useCallback(async (address?: string): Promise<boolean> => {
+  const targetAddress = address || user.addr;
+  
+  if (!targetAddress) {
+    setIsCreator(false);
+    return false;
+  }
 
-    try {
-      // In the checkIsCreator function:
-      const result = await fcl.query({
-        cadence: `
-    import FlowTip from 0x6c1b12e35dca8863
+  try {
+    console.log("Quick fix: Checking creator status for:", targetAddress);
     
-    access(all) fun main(address: Address): Bool {
-      let registeredCreators = FlowTip.getRegisteredCreators()
-      return registeredCreators.containsKey(address)
-    }
-  `,
-        args: (arg: any, t: any) => [arg(user.addr, t.Address)],
-      });
+    // Get all creators and check if any have your address
+    const allCreators = await fcl.query({
+      cadence: `
+        import FlowTip from 0x6c1b12e35dca8863
+        
+        access(all) fun main(userAddress: Address): Bool {
+          let allCreators = FlowTip.getAllCreators()
+          
+          for creator in allCreators {
+            // Check if this creator was created by your address
+            // This is a workaround for the address mismatch issue
+            if (creator.address == userAddress) {
+              return true
+            }
+          }
+          
+          // Also check the registration map
+          let registeredCreators = FlowTip.getRegisteredCreators()
+          return registeredCreators.containsKey(userAddress)
+        }
+      `,
+      args: (arg: any, t: any) => [arg(targetAddress, t.Address)],
+    });
 
-      setIsCreator(result);
-      return result;
-    } catch (error) {
-      console.error("Error checking if user is creator:", error);
-      return false;
-    }
-  };
+    console.log("Quick fix result:", allCreators);
+    setIsCreator(allCreators);
+    return allCreators;
+
+  } catch (error) {
+    console.error("Quick fix error:", error);
+    setIsCreator(false);
+    return false;
+  }
+}, [user.addr]);
 
   return (
     <AuthContext.Provider

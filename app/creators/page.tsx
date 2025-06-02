@@ -44,7 +44,7 @@ export default function CreatorsPage() {
           placeholder="Search creators..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md mx-auto"
+          className="max-w-md mx-auto text-black !placeholder:text-black"
         />
       </div>
       

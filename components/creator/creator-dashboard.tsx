@@ -1,15 +1,27 @@
-import React from 'react';
-import { Creator, Tip } from '../../lib/flow/scripts';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
-import { useAuth } from '@/context/auth-context';
-import { registerCreator } from '../../lib/flow/transactions';
-import { Button } from '../ui/button';
-import { Input } from '../ui/input';
-import { Textarea } from '../ui/textarea';
-import { AlertCircle, CheckCircle, User, DollarSign, TrendingUp, Calendar, MessageCircle, Loader2, ExternalLink } from 'lucide-react';
+import React from "react";
+import { Creator, Tip } from "../../lib/flow/scripts";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { useAuth } from "@/context/auth-context";
+import { registerCreator } from "../../lib/flow/transactions";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import {
+  AlertCircle,
+  CheckCircle,
+  User,
+  DollarSign,
+  TrendingUp,
+  Calendar,
+  MessageCircle,
+  Loader2,
+  ExternalLink,
+  Copy,
+} from "lucide-react";
 import * as fcl from "@onflow/fcl";
 import * as t from "@onflow/types";
-import Link from 'next/link';
+import Link from "next/link";
+import { copyProfileLink } from "@/lib/utils";
 
 // Helper function to check if user is registered as creator
 const checkIsCreator = async (address: string): Promise<boolean> => {
@@ -25,7 +37,7 @@ const checkIsCreator = async (address: string): Promise<boolean> => {
       `,
       args: (arg: any, t: any) => [arg(address, t.Address)],
     });
-    
+
     return result;
   } catch (error) {
     console.error("Error checking creator status:", error);
@@ -39,58 +51,64 @@ interface CreatorDashboardProps {
   onCreatorRegistered: () => Promise<void>;
 }
 
-const CreatorDashboard: React.FC<CreatorDashboardProps> = ({ 
-  creator, 
-  tips, 
-  onCreatorRegistered 
+const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
+  creator,
+  tips,
+  onCreatorRegistered,
 }) => {
-  const { user } = useAuth();
+  const { user, isCreator } = useAuth();
   const [isRegistering, setIsRegistering] = React.useState(false);
   const [isUpdating, setIsUpdating] = React.useState(false);
-  const [name, setName] = React.useState(creator?.name || '');
-  const [description, setDescription] = React.useState(creator?.description || '');
-  const [imageURL, setImageURL] = React.useState(creator?.imageURL || '');
+  const [name, setName] = React.useState(creator?.name || "");
+  const [description, setDescription] = React.useState(
+    creator?.description || ""
+  );
+  const [imageURL, setImageURL] = React.useState(creator?.imageURL || "");
   const [error, setError] = React.useState<string | null>(null);
   const [success, setSuccess] = React.useState<string | null>(null);
   const [transactionId, setTransactionId] = React.useState<string | null>(null);
-  
+
   const formatDate = (timestamp: number) => {
-    return new Date(timestamp * 1000).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    return new Date(timestamp * 1000).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const formatAmount = (amount: any): string => {
-    if (amount === null || amount === undefined) return '0.00';
-    const num = typeof amount === 'number' ? amount : parseFloat(amount);
-    return isNaN(num) ? '0.00' : num.toFixed(2);
+    if (amount === null || amount === undefined) return "0.00";
+    const num = typeof amount === "number" ? amount : parseFloat(amount);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
   };
-  
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user?.addr) {
-      setError('Please connect your wallet first');
+      setError("Please connect your wallet first");
       return;
     }
-    
+
     setError(null);
     setSuccess(null);
     setTransactionId(null);
-    
+
     try {
       setIsRegistering(true);
-      console.log("Starting registration with:", { name, description, imageURL });
-      
+      console.log("Starting registration with:", {
+        name,
+        description,
+        imageURL,
+      });
+
       const transactionId = await registerCreator(name, description, imageURL);
-      
+
       if (transactionId) {
         console.log("✅ Registration successful!");
-        setSuccess('Successfully registered as a creator!');
+        setSuccess("Successfully registered as a creator!");
         setTransactionId(transactionId.blockId);
-        
+
         setTimeout(async () => {
           if (user.addr) {
             const isCreatorNow = await checkIsCreator(user.addr);
@@ -100,53 +118,61 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
           }
         }, 2000);
       }
-      
     } catch (error: any) {
       console.error("Registration error:", error);
-      setError(error.message || 'Failed to register as creator. Please try again.');
+      setError(
+        error.message || "Failed to register as creator. Please try again."
+      );
     } finally {
       setIsRegistering(false);
     }
   };
-  
+
   const handleUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!user?.addr) {
-      setError('Please connect your wallet first');
+      setError("Please connect your wallet first");
       return;
     }
-    
+
     setError(null);
     setSuccess(null);
     setTransactionId(null);
-    
+
     try {
       setIsUpdating(true);
       console.log("Updating profile with:", { name, description, imageURL });
-      
+
       const transactionId = await registerCreator(name, description, imageURL);
-      
+
       if (transactionId) {
         console.log("✅ Update successful!");
-        setSuccess('Successfully updated your profile!');
+        setSuccess("Successfully updated your profile!");
         setTransactionId(transactionId.blockId);
-        
+
         setTimeout(async () => {
           await onCreatorRegistered();
         }, 2000);
       }
-      
     } catch (error: any) {
       console.error("Update error:", error);
-      setError(error.message || 'Failed to update profile. Please try again.');
+      setError(error.message || "Failed to update profile. Please try again.");
     } finally {
       setIsUpdating(false);
     }
   };
 
+  // In your component (no need for state management anymore!)
+  const handleCopyClick = async () => {
+    if (!user?.addr) return;
+
+    await copyProfileLink(user.addr);
+    // That's it! The function handles the toast notifications
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
       {/* Alert Messages */}
       {error && (
         <div className="bg-red-50 border-l-4 border-red-400 text-red-700 px-6 py-4 rounded-xl shadow-sm">
@@ -156,113 +182,20 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
           </div>
         </div>
       )}
-      
+
       {success && (
         <div className="bg-green-50 border-l-4 border-green-400 text-green-700 px-6 py-4 rounded-xl shadow-sm">
           <div className="flex items-center">
             <CheckCircle className="mr-3 h-5 w-5 flex-shrink-0" />
             <div>
               <span className="font-medium">{success}</span>
-              {transactionId && (
-                <p className="text-sm mt-1 text-green-600">
-                  Transaction: 
-                  <a 
-                    href={`https://flowscan.org/transaction/${transactionId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="ml-1 underline hover:text-green-800 transition-colors"
-                  >
-                    {transactionId.slice(0, 8)}...{transactionId.slice(-6)}
-                  </a>
-                </p>
-              )}
             </div>
           </div>
         </div>
       )}
 
-      {!creator ? (
-        /* Registration Form */
-        <div className="max-w-2xl mx-auto">
-          <Card className="border-0 shadow-xl bg-white rounded-3xl overflow-hidden">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 p-8">
-              <div className="text-center">
-                <div className="mx-auto w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-                  <User className="w-8 h-8 text-white" />
-                </div>
-                <CardTitle className="text-3xl font-bold text-gray-900 mb-2">Become a Creator</CardTitle>
-                <p className="text-gray-600">Start receiving tips from your supporters</p>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8">
-              <form onSubmit={handleRegister} className="space-y-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Display Name
-                  </label>
-                  <Input
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your creator name"
-                    required
-                    disabled={isRegistering}
-                    className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    About You
-                  </label>
-                  <Textarea
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Tell supporters about yourself and your content..."
-                    rows={4}
-                    required
-                    disabled={isRegistering}
-                    className="w-full px-4 py-4 text-base text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200 resize-none"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Profile Image URL <span className="text-gray-500 font-normal">(Optional)</span>
-                  </label>
-                  <Input
-                    value={imageURL}
-                    onChange={(e) => setImageURL(e.target.value)}
-                    placeholder="https://example.com/your-image.jpg"
-                    disabled={isRegistering}
-                    className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
-                  />
-                </div>
-                
-                <Button 
-                  type="submit" 
-                  disabled={isRegistering || !user?.addr}
-                  className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
-                >
-                  {isRegistering ? (
-                    <>
-                      <Loader2 className="mr-3 h-5 w-5 animate-spin" />
-                      Creating Profile...
-                    </>
-                  ) : (
-                    'Create Creator Profile'
-                  )}
-                </Button>
-                
-                {!user?.addr && (
-                  <p className="text-sm text-gray-500 text-center mt-4">
-                    Please connect your wallet to continue
-                  </p>
-                )}
-              </form>
-            </CardContent>
-          </Card>
-        </div>
-      ) : (
+      {/* FIXED CONDITION: Show dashboard when user IS a creator AND has creator data */}
+      {(isCreator && creator) || (creator && creator.address === user.addr) ? (
         <>
           {/* Creator Profile Link Section */}
           <Card className="border-0 shadow-lg bg-gradient-to-r from-green-50 to-emerald-50 rounded-2xl overflow-hidden">
@@ -273,16 +206,22 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                     <User className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-bold text-gray-900">Your Creator Profile</h3>
-                    <p className="text-gray-600">Share your profile link with supporters to receive tips</p>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Your Creator Profile
+                    </h3>
+                    <p className="text-gray-600">
+                      Share your profile link with supporters to receive tips
+                    </p>
                   </div>
                 </div>
-                <Link href={`/creators/${user?.addr}`}>
-                  <Button className="bg-white text-green-600 hover:bg-gray-50 border-2 border-green-200 hover:border-green-300 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all duration-200">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Public Profile
-                  </Button>
-                </Link>
+
+                <Button
+                  onClick={handleCopyClick}
+                  className="bg-white text-green-600 hover:bg-gray-50 border-2 border-green-200 hover:border-green-300 px-6 py-3 rounded-xl font-semibold shadow-sm hover:shadow-md transition-all duration-200"
+                >
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copy Profile Link
+                </Button>
               </div>
             </CardContent>
           </Card>
@@ -297,11 +236,15 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   </div>
                   <span className="text-2xl">📈</span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">Total Tips</h3>
-                <p className="text-3xl font-bold text-gray-900">{creator.tipCount || 0}</p>
+                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                  Total Tips
+                </h3>
+                <p className="text-3xl font-bold text-gray-900">
+                  {creator?.tipCount || 0}
+                </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -310,11 +253,16 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   </div>
                   <span className="text-2xl">💰</span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">Total Earned</h3>
-                <p className="text-3xl font-bold text-gray-900">{formatAmount(creator.totalTipped)} <span className="text-lg text-gray-600">FLOW</span></p>
+                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                  Total Earned
+                </h3>
+                <p className="text-3xl font-bold text-gray-900">
+                  {formatAmount(creator?.totalTipped)}{" "}
+                  <span className="text-lg text-gray-600">FLOW</span>
+                </p>
               </CardContent>
             </Card>
-            
+
             <Card className="border-0 shadow-lg bg-gradient-to-br from-white to-gray-50 rounded-2xl overflow-hidden hover:shadow-xl transition-shadow duration-300">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between mb-4">
@@ -323,16 +271,21 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   </div>
                   <span className="text-2xl">📊</span>
                 </div>
-                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">Average Tip</h3>
+                <h3 className="text-sm font-semibold text-gray-600 uppercase tracking-wide mb-1">
+                  Average Tip
+                </h3>
                 <p className="text-3xl font-bold text-gray-900">
-                  {creator.tipCount > 0 
-                    ? formatAmount(Number(creator.totalTipped) / creator.tipCount)
-                    : "0.00"} <span className="text-lg text-gray-600">FLOW</span>
+                  {creator && creator.tipCount > 0
+                    ? formatAmount(
+                        Number(creator?.totalTipped) / creator?.tipCount
+                      )
+                    : "0.00"}{" "}
+                  <span className="text-lg text-gray-600">FLOW</span>
                 </p>
               </CardContent>
             </Card>
           </div>
-          
+
           {/* Profile Update Form */}
           <Card className="border-0 shadow-xl bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 p-8">
@@ -356,7 +309,7 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                     className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
                     About You
@@ -371,10 +324,13 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                     className="w-full px-4 py-4 text-base text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200 resize-none"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-3">
-                    Profile Image URL <span className="text-gray-500 font-normal">(Optional)</span>
+                    Profile Image URL{" "}
+                    <span className="text-gray-500 font-normal">
+                      (Optional)
+                    </span>
                   </label>
                   <Input
                     value={imageURL}
@@ -384,9 +340,9 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                     className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
                   />
                 </div>
-                
-                <Button 
-                  type="submit" 
+
+                <Button
+                  type="submit"
                   disabled={isUpdating}
                   className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
                 >
@@ -396,13 +352,13 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                       Updating Profile...
                     </>
                   ) : (
-                    'Update Profile'
+                    "Update Profile"
                   )}
                 </Button>
               </form>
             </CardContent>
           </Card>
-          
+
           {/* Recent Tips */}
           <Card className="border-0 shadow-xl bg-white rounded-3xl overflow-hidden">
             <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 p-8">
@@ -417,13 +373,17 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                   <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <DollarSign className="w-8 h-8 text-green-500" />
                   </div>
-                  <h3 className="text-xl font-semibold text-gray-900 mb-2">No tips yet</h3>
-                  <p className="text-gray-600">Share your profile to start receiving tips from supporters!</p>
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    No tips yet
+                  </h3>
+                  <p className="text-gray-600">
+                    Share your profile to start receiving tips from supporters!
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-6">
                   {tips.map((tip, index) => (
-                    <div 
+                    <div
                       key={tip.id}
                       className="bg-gradient-to-r from-gray-50 to-green-50 rounded-2xl p-6 border border-gray-100 hover:shadow-md transition-shadow duration-200"
                     >
@@ -443,14 +403,18 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
                           </div>
                         </div>
                         <div className="bg-gradient-to-r from-green-500 to-emerald-500 text-white px-6 py-3 rounded-full shadow-lg">
-                          <span className="font-bold text-lg">{formatAmount(tip.amount)} FLOW</span>
+                          <span className="font-bold text-lg">
+                            {formatAmount(tip.amount)} FLOW
+                          </span>
                         </div>
                       </div>
                       {tip.message && (
                         <div className="mt-4 bg-white rounded-xl p-4 border-l-4 border-green-400 shadow-sm">
                           <div className="flex items-start space-x-2">
                             <MessageCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
-                            <p className="text-gray-700 italic">"{tip.message}"</p>
+                            <p className="text-gray-700 italic">
+                              "{tip.message}"
+                            </p>
                           </div>
                         </div>
                       )}
@@ -460,6 +424,97 @@ const CreatorDashboard: React.FC<CreatorDashboardProps> = ({
               )}
             </CardContent>
           </Card>
+        </>
+      ) : (
+        <>
+          {/* Registration Form - shown when NOT a creator */}
+          <div className="max-w-2xl mx-auto">
+            <Card className="border-0 shadow-xl bg-white rounded-3xl overflow-hidden">
+              <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 p-8">
+                <div className="text-center">
+                  <div className="mx-auto w-16 h-16 bg-gradient-to-r from-green-500 to-emerald-500 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+                    <User className="w-8 h-8 text-white" />
+                  </div>
+                  <CardTitle className="text-3xl font-bold text-gray-900 mb-2">
+                    Become a Creator
+                  </CardTitle>
+                  <p className="text-gray-600">
+                    Start receiving tips from your supporters
+                  </p>
+                </div>
+              </CardHeader>
+              <CardContent className="p-8">
+                <form onSubmit={handleRegister} className="space-y-6">
+                  {/* Registration form content - same as before */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">
+                      Display Name
+                    </label>
+                    <Input
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your creator name"
+                      required
+                      disabled={isRegistering}
+                      className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">
+                      About You
+                    </label>
+                    <Textarea
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      placeholder="Tell supporters about yourself and your content..."
+                      rows={4}
+                      required
+                      disabled={isRegistering}
+                      className="w-full px-4 py-4 text-base text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200 resize-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-900 mb-3">
+                      Profile Image URL{" "}
+                      <span className="text-gray-500 font-normal">
+                        (Optional)
+                      </span>
+                    </label>
+                    <Input
+                      value={imageURL}
+                      onChange={(e) => setImageURL(e.target.value)}
+                      placeholder="https://example.com/your-image.jpg"
+                      disabled={isRegistering}
+                      className="w-full px-4 py-4 text-lg text-black border-2 border-gray-200 focus:border-green-400 rounded-xl bg-gray-50 focus:bg-white transition-all duration-200"
+                    />
+                  </div>
+
+                  <Button
+                    type="submit"
+                    disabled={isRegistering || !user?.addr}
+                    className="w-full py-4 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white text-lg font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 disabled:opacity-50"
+                  >
+                    {isRegistering ? (
+                      <>
+                        <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+                        Creating Profile...
+                      </>
+                    ) : (
+                      "Create Creator Profile"
+                    )}
+                  </Button>
+
+                  {!user?.addr && (
+                    <p className="text-sm text-gray-500 text-center mt-4">
+                      Please connect your wallet to continue
+                    </p>
+                  )}
+                </form>
+              </CardContent>
+            </Card>
+          </div>
         </>
       )}
     </div>

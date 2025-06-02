@@ -39,7 +39,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-purple-600 to-pink-600 shadow-2xl">
+      <div className="relative overflow-hidden rounded-3xl bg-green-600 text-white mt-10 shadow-2xl">
         {/* Animated background patterns */}
         <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20">
           <div className="absolute top-0 left-0 w-72 h-72 bg-white/10 rounded-full -translate-x-36 -translate-y-36 animate-pulse" />
@@ -50,7 +50,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
           <div className="flex flex-col lg:flex-row items-start lg:items-center gap-8">
             {/* Avatar with enhanced design */}
             <div className="relative group">
-              <div className="absolute inset-0 bg-gradient-to-r from-pink-500 to-violet-500 rounded-full blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-r  rounded-full blur-xl opacity-75 group-hover:opacity-100 transition-opacity duration-300" />
               <Avatar className="relative h-32 w-32 ring-8 ring-white/20 shadow-2xl transition-transform duration-300 group-hover:scale-105">
                 <img 
                   src={creator.imageURL || `https://api.dicebear.com/9.x/adventurer/svg?seed=${creator.name}`} 
@@ -97,11 +97,11 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
                 // Withdrawal button for the creator themselves
                 <Button 
                   onClick={() => setShowWithdrawalModal(true)}
-                  className="bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 px-8 py-4 text-lg font-semibold rounded-2xl border-0"
+                  className="bg-white text-black shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:scale-105 px-8 py-4 text-lg font-semibold rounded-2xl border-0"
                   disabled={!creator.totalTipped || parseFloat(creator.totalTipped.toString()) <= 0}
                 >
                   <Wallet className="w-5 h-5 mr-2" />
-                  Withdraw Tips ({formatAmount(creator.totalTipped)} FLOW)
+                  Withdraw Tips
                 </Button>
               ) : user?.loggedIn ? (
                 // Send tip button for other users
@@ -120,13 +120,13 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-        <Card className="bg-gradient-to-br from-pink-50 to-rose-100 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+        <Card className="bg-gradient-to-br bg-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-pink-500 rounded-xl shadow-lg">
+              <div className="p-3 bg-green-600 rounded-xl shadow-lg">
                 <Heart className="w-6 h-6 text-white" />
               </div>
-              <TrendingUp className="w-5 h-5 text-pink-500" />
+              <TrendingUp className="w-5 h-5 text-green-500" />
             </div>
             <h3 className="text-sm font-medium text-gray-600 uppercase tracking-wide mb-1">Total Tips</h3>
             <p className="text-3xl font-bold text-gray-900">{creator.tipCount || 0}</p>
@@ -174,7 +174,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
       <Card className="mt-8 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <CardContent className="p-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-gradient-to-r from-purple-500 to-pink-500 rounded-lg">
+            <div className="p-2 bg-gradient-to-r bg-green-600 rounded-lg">
               <User className="w-5 h-5 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">About</h2>
@@ -189,7 +189,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
       {tips.length > 0 && (
         <div className="mt-8">
           <div className="flex items-center space-x-3 mb-6">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+            <div className="p-2 bg-gradient-to-r bg-green-600 rounded-lg">
               <MessageCircle className="w-5 h-5 text-white" />
             </div>
             <h2 className="text-2xl font-bold text-gray-900">Recent Tips</h2>
@@ -201,7 +201,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
                 <CardContent className="p-6">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center space-x-4">
-                      <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                      <div className="w-12 h-12 bg-gradient-to-r bg-green-600 rounded-full flex items-center justify-center text-white font-bold">
                         {index + 1}
                       </div>
                       <div>
@@ -216,7 +216,7 @@ const CreatorProfile: React.FC<CreatorProfileProps> = ({ creator, tips }) => {
                     </div>
                     
                     <div className="text-right">
-                      <div className="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-full shadow-lg">
+                      <div className="bg-gradient-to-r bg-green-600 text-white px-4 py-2 rounded-full shadow-lg">
                         <span className="font-bold text-lg">{formatAmount(tip.amount)} FLOW</span>
                       </div>
                     </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../../context/auth-context";
 import {
@@ -10,58 +11,97 @@ import {
 } from "../../lib/flow/scripts";
 import CreatorDashboard from "@/components/creator/creator-dashboard";
 import WalletConnector from "../../components/auth/wallet-connector";
-import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { testBasicTransaction } from "@/lib/flow/test";
 
+// Replace your useEffect with this approach
 export default function DashboardPage() {
   const { user, isCreator, checkIsCreator } = useAuth();
   const router = useRouter();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [tips, setTips] = useState<Tip[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [hasCheckedCreator, setHasCheckedCreator] = useState<boolean>(false);
 
+  // Redirect effect (keep this separate)
   useEffect(() => {
-    // Redirect to home if not logged in
     if (user.loggedIn === false) {
       router.push("/");
     }
   }, [user.loggedIn, router]);
 
-  useEffect(() => {
-    async function fetchCreatorData() {
-      if (!user.addr) return;
-
-      try {
-        setIsLoading(true);
-
-        if (isCreator) {
-          const creatorData = await getCreatorByAddress(user.addr);
-          setCreator(creatorData);
-
-          const tipsData = await getCreatorTips(user.addr);
-          setTips(tipsData);
-        }
-      } catch (error) {
-        console.error("Error fetching creator data:", error);
-      } finally {
-        setIsLoading(false);
-      }
+  // Manual fetch function
+  const fetchCreatorData = async (force = false) => {
+    if (!user.addr || !user.loggedIn) {
+      console.log("Cannot fetch: no address or not logged in");
+      setIsLoading(false);
+      return;
     }
 
-    if (user.addr) {
+    try {
+      console.log("Fetching creator data for:", user.addr);
+      setIsLoading(true);
+
+      // Always check creator status first
+      const creatorData = await getCreatorByAddress(user.addr);
+      console.log("Creator data result:", creatorData);
+      
+      if (creatorData) {
+        setCreator(creatorData);
+        
+        // Fetch tips
+        console.log("Fetching tips...");
+        const tipsData = await getCreatorTips(user.addr);
+        console.log("Tips result:", tipsData);
+        setTips(tipsData || []);
+      } else {
+        console.log("No creator found");
+        setCreator(null);
+        setTips([]);
+      }
+    } catch (error) {
+      console.error("Error in fetchCreatorData:", error);
+      setCreator(null);
+      setTips([]);
+    } finally {
+      setIsLoading(false);
+      setHasCheckedCreator(true);
+    }
+  };
+
+  // Trigger fetch when user address is available
+  useEffect(() => {
+    if (user.addr && user.loggedIn && !hasCheckedCreator) {
+      console.log("Triggering initial fetch for:", user.addr);
       fetchCreatorData();
     }
-  }, [user.addr, isCreator]);
+  }, [user.addr, user.loggedIn, hasCheckedCreator]);
+
+  // Reset state when user changes
+  useEffect(() => {
+    if (!user.addr) {
+      setCreator(null);
+      setTips([]);
+      setHasCheckedCreator(false);
+      setIsLoading(false);
+    }
+  }, [user.addr]);
 
   const handleCreatorRegistered = async () => {
     if (!user.addr) return;
-
+    
     await checkIsCreator();
-    const creatorData = await getCreatorByAddress(user.addr);
-    setCreator(creatorData);
+    setHasCheckedCreator(false); // Reset to trigger refetch
+    await fetchCreatorData(true); // Force refetch
   };
 
+  // Add a manual refresh button for debugging
+  const handleRefresh = () => {
+    setHasCheckedCreator(false);
+    fetchCreatorData(true);
+  };
+
+  // Rest of your component...
   if (user.loggedIn === null) {
     return (
       <div className="text-center py-12">
@@ -71,7 +111,7 @@ export default function DashboardPage() {
   }
 
   if (user.loggedIn === false) {
-    return null; // Will redirect to home
+    return null;
   }
 
   return (
@@ -79,12 +119,12 @@ export default function DashboardPage() {
       <div className="text-center mb-12">
         <h1 className="text-4xl font-bold mb-4">Creator Dashboard</h1>
         <p className="text-xl text-gray-600">
-          {isCreator
+          {creator 
             ? "Manage your creator profile and view your tips"
             : "Register as a creator to start receiving tips"}
         </p>
-      </div>
-      {/* <Button onClick={testBasicTransaction}>Test Basic Transaction</Button> */}
+        </div>
+
       {!user.addr ? (
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-sm p-6 border border-gray-200">
           <h2 className="text-2xl font-bold mb-4 text-center">
