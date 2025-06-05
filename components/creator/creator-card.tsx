@@ -18,9 +18,9 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
   };
 
   return (
-    <Card className="group relative overflow-hidden bg-gradient-to-br from-white via-gray-50/50 to-gray-100/30 border-0 shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-2 backdrop-blur-sm">
+    <Card className="group relative overflow-hidden bg-white border text-black shadow-lg :shadow-2xl transition-all duration-500 :-translate-y-2 backdrop-blur-sm">
       {/* Animated background gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+      {/* <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 via-purple-500/5 to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" /> */}
       
       {/* Header */}
       <CardHeader className="relative p-6 pb-4">
@@ -42,12 +42,12 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
           </div>
           
           <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-xl text-gray-900 mb-1 truncate group-hover:text-blue-600 transition-colors duration-300">
+            <h3 className="font-bold text-xl text-black mb-1 truncate group-:text-blue-600 transition-colors duration-300">
               {creator.name}
             </h3>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <User className="w-3 h-3" />
-              <span className="font-mono bg-gray-100 px-2 py-1 rounded-md text-xs">
+              <span className=" bg-gray-100 px-2 py-1 rounded-md text-xs">
                 {creator.address.slice(0, 6)}...{creator.address.slice(-4)}
               </span>
             </div>
@@ -57,26 +57,26 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
 
       {/* Content */}
       <CardContent className="relative px-6 pb-4">
-        <p className="text-gray-600 line-clamp-3 text-sm leading-relaxed mb-6">
+        <p className="text-black line-clamp-3 text-sm leading-relaxed mb-6">
           {creator.description}
         </p>
         
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-100 shadow-sm :shadow-md transition-shadow duration-300">
             <div className="flex items-center space-x-2 mb-1">
-              <Heart className="w-4 h-4 text-pink-500" />
+              <Heart className="w-4 h-4 text-black" />
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">Tips</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">{creator.tipCount || 0}</span>
+            <span className="text-2xl font-bold text-black">{creator.tipCount || 0}</span>
           </div>
           
-          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-100 shadow-sm hover:shadow-md transition-shadow duration-300">
+          <div className="bg-white/70 backdrop-blur-sm rounded-xl p-4 border border-gray-100 shadow-sm :shadow-md transition-shadow duration-300">
             <div className="flex items-center space-x-2 mb-1">
-              <Coins className="w-4 h-4 text-blue-500" />
+              <Coins className="w-4 h-4 text-black" />
               <span className="text-xs font-medium text-gray-500 uppercase tracking-wide">FLOW</span>
             </div>
-            <span className="text-2xl font-bold text-gray-900">
+            <span className="text-2xl font-bold text-black">
               {formatAmount(creator.totalTipped)}
             </span>
           </div>
@@ -88,16 +88,16 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
         <Link href={`/creators/${creator.address}`} className="w-full">
           <Button 
             variant="default" 
-            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white border-0 shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] font-semibold py-3"
+            className="w-full bg-gradient-to-r bg-green-600  text-white shadow-lg :shadow-xl transition-all duration-300 transform :scale-[1.02] font-semibold py-3 border-0"
           >
             View Profile
-            <div className="absolute inset-0 bg-white/20 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-white/20 rounded-md opacity-0 group-:opacity-100 transition-opacity duration-300" />
           </Button>
         </Link>
       </CardFooter>
 
       {/* Subtle border glow effect */}
-      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-hover:opacity-20 transition-opacity duration-500 -z-10 blur-xl" />
+      <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 opacity-0 group-:opacity-20 transition-opacity duration-500 -z-10 blur-xl" />
     </Card>
   );
 };

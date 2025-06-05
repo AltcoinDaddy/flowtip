@@ -14,6 +14,8 @@ export default function CreatorsPage() {
     async function fetchCreators() {
       try {
         const data = await getCreators();
+
+        console.log(data)
         setCreators(data);
       } catch (error) {
         console.error("Error fetching creators:", error);
@@ -44,7 +46,7 @@ export default function CreatorsPage() {
           placeholder="Search creators..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          className="max-w-md mx-auto text-black !placeholder:text-black"
+          className="max-w-md mx-auto text-black placeholder:text-black"
         />
       </div>
       

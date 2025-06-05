@@ -1,8 +1,22 @@
 import * as fcl from "@onflow/fcl";
 import * as t from "@onflow/types";
 
-// Register as a creator - ENHANCED DEBUG VERSION
-export const registerCreator = async (name: string, description: string, imageURL: string) => {
+// Define the transaction result interface
+interface TransactionResult {
+  status: number;
+  statusString: string;
+  blockId?: string;
+  transactionId?: string;
+  events?: any[];
+  errorMessage?: string;
+}
+
+// Register as a creator with proper typing
+export const registerCreator = async (
+  name: string, 
+  description: string, 
+  imageURL: string
+): Promise<TransactionResult> => {
   try {
     console.log("🚀 Starting creator registration...", { name, description, imageURL });
     
@@ -26,7 +40,6 @@ export const registerCreator = async (name: string, description: string, imageUR
     }
     
     console.log("✅ User is connected:", currentUser.addr);
-    
     console.log("📝 Preparing transaction...");
     
     const transactionId = await fcl.mutate({
@@ -34,21 +47,19 @@ export const registerCreator = async (name: string, description: string, imageUR
         import FlowTip from 0x6c1b12e35dca8863
 
         transaction(name: String, description: String, imageURL: String) {
-          prepare(acct: auth(Storage, Capabilities) &Account) {
-            log("Starting transaction for account: ".concat(acct.address.toString()))
+          prepare(signer: auth(BorrowValue, SaveValue, IssueStorageCapabilityController, PublishCapability, UnpublishCapability) &Account) {
+            log("Starting transaction for account: ".concat(signer.address.toString()))
             
             // Check if the user is already registered as a creator
-            if acct.storage.borrow<&FlowTip.Creator>(from: FlowTip.CreatorStoragePath) != nil {
+            if let existingCreator = signer.storage.borrow<&FlowTip.Creator>(from: FlowTip.CreatorStoragePath) {
               log("User already registered, updating profile...")
-              // Already registered, update profile instead
-              let creator = acct.storage.borrow<&FlowTip.Creator>(from: FlowTip.CreatorStoragePath)
-                ?? panic("Could not borrow creator")
-              creator.updateProfile(name: name, description: description, imageURL: imageURL)
+              existingCreator.updateProfile(name: name, description: description, imageURL: imageURL)
               log("Profile updated successfully")
             } else {
               log("Registering new creator...")
-              // Register as a new creator and get the ID
-              let creatorID = FlowTip.registerCreator(name: name, description: description, imageURL: imageURL)
+              
+              // Get the next creator ID manually (since contract registerCreator is broken)
+              let creatorID = FlowTip.nextCreatorID
               log("Creator ID assigned: ".concat(creatorID.toString()))
               
               // Create the Creator resource
@@ -56,12 +67,12 @@ export const registerCreator = async (name: string, description: string, imageUR
               log("Creator resource created")
               
               // Save the Creator resource to storage
-              acct.storage.save(<-creator, to: FlowTip.CreatorStoragePath)
+              signer.storage.save(<-creator, to: FlowTip.CreatorStoragePath)
               log("Creator saved to storage")
               
               // Create and publish the capability
-              let creatorCap = acct.capabilities.storage.issue<&FlowTip.Creator>(FlowTip.CreatorStoragePath)
-              acct.capabilities.publish(creatorCap, at: FlowTip.CreatorPublicPath)
+              let creatorCap = signer.capabilities.storage.issue<&FlowTip.Creator>(FlowTip.CreatorStoragePath)
+              signer.capabilities.publish(creatorCap, at: FlowTip.CreatorPublicPath)
               log("Capability published")
             }
             
@@ -74,26 +85,28 @@ export const registerCreator = async (name: string, description: string, imageUR
         arg(description, t.String),
         arg(imageURL, t.String),
       ],
-      payer: fcl.authz,
-      proposer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 300, // Increased gas limit
+      proposer: fcl.currentUser,
+      payer: fcl.currentUser,
+      authorizations: [fcl.currentUser],
+      limit: 9999,
     });
 
     console.log("✅ Transaction submitted:", transactionId);
     
-    // Subscribe to transaction status
-    const unsub = fcl.tx(transactionId).subscribe((res: any) => {
-      console.log("📊 Transaction status:", res);
-    });
-    
+    // Wait for the transaction to be sealed and return the result with proper typing
     const result = await fcl.tx(transactionId).onceSealed();
     console.log("🎉 Transaction sealed:", result);
     
-    // Clean up subscription
-    unsub();
+    // Return properly typed result
+    return {
+      status: result.status,
+      statusString: result.statusString,
+      blockId: result.blockId,
+      transactionId: transactionId,
+      events: result.events || [],
+      errorMessage: result.errorMessage
+    } as TransactionResult;
     
-    return result;
   } catch (error) {
     console.error("❌ Error registering creator:", error);
     
@@ -103,12 +116,8 @@ export const registerCreator = async (name: string, description: string, imageUR
       console.error("Error stack:", error.stack);
     }
     
-    // Log FCL error details if available
-    if (error && typeof error === 'object' && 'message' in error) {
-      console.error("FCL Error details:", error);
-    }
-    
-    throw error;
+    // Re-throw with proper error message
+    throw new Error(error instanceof Error ? error.message : "Unknown error occurred during registration");
   }
 };
 

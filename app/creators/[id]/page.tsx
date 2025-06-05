@@ -6,6 +6,7 @@ import CreatorProfile from '@/components/creator/creator-profile';
 import { useRouter } from 'next/navigation';
 
 export default function CreatorProfilePage({ params }: { params: { id: string } }) {
+
   const router = useRouter();
   const [creator, setCreator] = useState<Creator | null>(null);
   const [tips, setTips] = useState<Tip[]>([]);
@@ -24,6 +25,8 @@ export default function CreatorProfilePage({ params }: { params: { id: string } 
         }
         
         setCreator(creatorData);
+
+        console.log("Creator", creatorData)
         
         const tipsData = await getCreatorTips(params.id);
         setTips(tipsData);

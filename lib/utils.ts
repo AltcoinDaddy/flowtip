@@ -122,3 +122,10 @@ export const copyProfileLinkCustom = async (
     return false;
   }
 };
+
+
+  export const formatAmount = (amount: any): string => {
+    if (amount === null || amount === undefined) return "0.00";
+    const num = typeof amount === "number" ? amount : parseFloat(amount);
+    return isNaN(num) ? "0.00" : num.toFixed(2);
+  };
