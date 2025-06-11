@@ -11,74 +11,86 @@ interface TransactionResult {
   errorMessage?: string;
 }
 
-// Register as a creator with proper typing
+// 🔧 FIXED: Registration function that matches your CURRENT contract
 export const registerCreator = async (
-  name: string, 
-  description: string, 
+  name: string,
+  description: string,
   imageURL: string
 ): Promise<TransactionResult> => {
   try {
-    console.log("🚀 Starting creator registration...", { name, description, imageURL });
-    
-    // Check FCL configuration
-    console.log("📋 FCL Config:", {
-      accessNode: await fcl.config.get("accessNode.api"),
-      contractAddress: await fcl.config.get("0xFlowTip"),
-      discovery: await fcl.config.get("discovery.wallet")
+    console.log("🚀 Starting creator registration...", {
+      name,
+      description,
+      imageURL,
     });
-    
-    // Check current user
+
     const currentUser = await fcl.currentUser.snapshot();
     console.log("👤 Current User:", currentUser);
-    
+
     if (!currentUser.loggedIn) {
-      throw new Error("User is not logged in. Please connect your wallet first.");
+      throw new Error(
+        "User is not logged in. Please connect your wallet first."
+      );
     }
-    
+
     if (!currentUser.addr) {
       throw new Error("User address not found. Please reconnect your wallet.");
     }
-    
+
     console.log("✅ User is connected:", currentUser.addr);
-    console.log("📝 Preparing transaction...");
-    
+
     const transactionId = await fcl.mutate({
       cadence: `
         import FlowTip from 0x6c1b12e35dca8863
 
-        transaction(name: String, description: String, imageURL: String) {
-          prepare(signer: auth(BorrowValue, SaveValue, IssueStorageCapabilityController, PublishCapability, UnpublishCapability) &Account) {
-            log("Starting transaction for account: ".concat(signer.address.toString()))
-            
-            // Check if the user is already registered as a creator
-            if let existingCreator = signer.storage.borrow<&FlowTip.Creator>(from: FlowTip.CreatorStoragePath) {
-              log("User already registered, updating profile...")
-              existingCreator.updateProfile(name: name, description: description, imageURL: imageURL)
-              log("Profile updated successfully")
-            } else {
-              log("Registering new creator...")
-              
-              // Get the next creator ID manually (since contract registerCreator is broken)
-              let creatorID = FlowTip.nextCreatorID
-              log("Creator ID assigned: ".concat(creatorID.toString()))
-              
-              // Create the Creator resource
-              let creator <- FlowTip.createCreator(id: creatorID, name: name, description: description, imageURL: imageURL)
-              log("Creator resource created")
-              
-              // Save the Creator resource to storage
-              signer.storage.save(<-creator, to: FlowTip.CreatorStoragePath)
-              log("Creator saved to storage")
-              
-              // Create and publish the capability
-              let creatorCap = signer.capabilities.storage.issue<&FlowTip.Creator>(FlowTip.CreatorStoragePath)
-              signer.capabilities.publish(creatorCap, at: FlowTip.CreatorPublicPath)
-              log("Capability published")
-            }
-            
-            log("Transaction completed successfully")
-          }
+    transaction(name: String, description: String, imageURL: String) {
+      prepare(account: auth(Storage, Capabilities) &Account) {
+        log("🔧 Starting creator registration...")
+        
+        // Clean up any existing resources first
+        if account.storage.borrow<&FlowTip.Creator>(from: FlowTip.CreatorStoragePath) != nil {
+          log("⚠️ Removing existing creator resource...")
+          let oldCreator <- account.storage.load<@FlowTip.Creator>(from: FlowTip.CreatorStoragePath)
+          destroy oldCreator
         }
+        
+        // Remove old capability if it exists
+        account.capabilities.unpublish(FlowTip.CreatorPublicPath)
+        
+        // Register with contract first to get ID
+        log("📝 Registering with contract...")
+        let creatorID = FlowTip.registerCreator(address: account.address)
+        log("✅ Registered with ID: ".concat(creatorID.toString()))
+        
+        // Create the Creator resource with correct signature
+        log("🏗️ Creating creator resource...")
+        let creator <- FlowTip.createCreator(
+          id: creatorID,
+          name: name,
+          description: description, 
+          imageURL: imageURL
+        )
+        
+        // Save to storage
+        log("💾 Saving to storage...")
+        account.storage.save(<-creator, to: FlowTip.CreatorStoragePath)
+        
+        // 🆕 NEW: Create capability using Cadence 1.0 syntax
+        log("🔗 Creating public capability...")
+        let creatorCap = account.capabilities.storage.issue<&FlowTip.Creator>(
+          FlowTip.CreatorStoragePath
+        )
+        
+        // Publish the capability
+        account.capabilities.publish(creatorCap, at: FlowTip.CreatorPublicPath)
+        
+        log("✅ Creator registration completed successfully!")
+      }
+      
+      execute {
+        log("🎉 Transaction executed successfully")
+      }
+    }
       `,
       args: (arg: any, t: any) => [
         arg(name, t.String),
@@ -92,44 +104,52 @@ export const registerCreator = async (
     });
 
     console.log("✅ Transaction submitted:", transactionId);
-    
-    // Wait for the transaction to be sealed and return the result with proper typing
+
     const result = await fcl.tx(transactionId).onceSealed();
     console.log("🎉 Transaction sealed:", result);
-    
-    // Return properly typed result
+
     return {
       status: result.status,
       statusString: result.statusString,
       blockId: result.blockId,
       transactionId: transactionId,
       events: result.events || [],
-      errorMessage: result.errorMessage
+      errorMessage: result.errorMessage,
     } as TransactionResult;
-    
-  } catch (error) {
+  } catch (error: any) {
     console.error("❌ Error registering creator:", error);
-    
-    // More detailed error logging
+
+    // Enhanced error logging
     if (error instanceof Error) {
       console.error("Error message:", error.message);
       console.error("Error stack:", error.stack);
     }
-    
-    // Re-throw with proper error message
-    throw new Error(error instanceof Error ? error.message : "Unknown error occurred during registration");
+
+    throw new Error(
+      error instanceof Error
+        ? error.message
+        : "Unknown error occurred during registration"
+    );
   }
 };
 
 // Send a tip to a creator - BASIC VERSION
-export const sendTip = async (recipientAddress: string, amount: number, message: string) => {
+export const sendTip = async (
+  recipientAddress: string,
+  amount: number,
+  message: string
+) => {
   try {
-    console.log("🚀 Starting tip transaction...", { recipientAddress, amount, message });
-    
+    console.log("🚀 Starting tip transaction...", {
+      recipientAddress,
+      amount,
+      message,
+    });
+
     // Debug: Check user authentication first
     const currentUser = await fcl.currentUser.snapshot();
     console.log("👤 Current user:", currentUser);
-    
+
     if (!currentUser.loggedIn) {
       throw new Error("User not logged in");
     }
@@ -147,16 +167,18 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
         return vaultRef.balance
       }
     `;
-    
+
     try {
       const balance = await fcl.query({
         cadence: balanceScript,
-        args: (arg: any, t: any) => [arg(currentUser.addr, t.Address)]
+        args: (arg: any, t: any) => [arg(currentUser.addr, t.Address)],
       });
       console.log("💰 Current FLOW balance:", balance);
-      
+
       if (parseFloat(balance) < amount) {
-        throw new Error(`Insufficient balance. You have ${balance} FLOW but need ${amount} FLOW`);
+        throw new Error(
+          `Insufficient balance. You have ${balance} FLOW but need ${amount} FLOW`
+        );
       }
     } catch (balanceError) {
       console.warn("⚠️ Could not check balance:", balanceError);
@@ -173,14 +195,14 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
         return creatorRef != nil
       }
     `;
-    
+
     try {
       const hasCreator = await fcl.query({
         cadence: checkRecipientScript,
-        args: (arg: any, t: any) => [arg(recipientAddress, t.Address)]
+        args: (arg: any, t: any) => [arg(recipientAddress, t.Address)],
       });
       console.log("🎯 Recipient has Creator resource:", hasCreator);
-      
+
       if (!hasCreator) {
         throw new Error("Recipient does not have a Creator resource set up");
       }
@@ -241,12 +263,12 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
     });
 
     console.log("✅ Tip transaction submitted:", transactionId);
-    
+
     // Debug: Monitor transaction status
     console.log("⏳ Waiting for transaction to be sealed...");
     const result = await fcl.tx(transactionId).onceSealed();
     console.log("🎉 Tip transaction sealed:", result);
-    
+
     // Debug: Check if transaction was successful
     if (result.status === 4) {
       console.log("✅ Transaction successful!");
@@ -255,10 +277,9 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
       console.error("❌ Transaction failed with status:", result.status);
       throw new Error(`Transaction failed with status: ${result.status}`);
     }
-    
   } catch (error: any) {
     console.error("❌ Error sending tip:", error);
-    
+
     // Enhanced error logging for debugging
     if (error.message) {
       console.error("📝 Error message:", error.message);
@@ -269,7 +290,7 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
     if (error.cause) {
       console.error("🔍 Error cause:", error.cause);
     }
-    
+
     throw error;
   }
 };
@@ -279,7 +300,7 @@ export const sendTip = async (recipientAddress: string, amount: number, message:
 export const debugFlowAccount = async (address: string) => {
   try {
     console.log("🔍 Debugging Flow account:", address);
-    
+
     // Check if account exists
     const accountScript = `
       access(all) fun main(address: Address): Bool {
@@ -287,13 +308,13 @@ export const debugFlowAccount = async (address: string) => {
         return true
       }
     `;
-    
+
     const exists = await fcl.query({
       cadence: accountScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)]
+      args: (arg: any, t: any) => [arg(address, t.Address)],
     });
     console.log("✅ Account exists:", exists);
-    
+
     // Check FlowToken vault
     const vaultScript = `
       import FlowToken from 0x1654653399040a61
@@ -321,13 +342,13 @@ export const debugFlowAccount = async (address: string) => {
         return result
       }
     `;
-    
+
     const vaultInfo = await fcl.query({
       cadence: vaultScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)]
+      args: (arg: any, t: any) => [arg(address, t.Address)],
     });
     console.log("💰 Vault info:", vaultInfo);
-    
+
     return vaultInfo;
   } catch (error) {
     console.error("❌ Debug error:", error);
@@ -338,7 +359,7 @@ export const debugFlowAccount = async (address: string) => {
 export const debugCreatorResource = async (address: string) => {
   try {
     console.log("🎨 Debugging Creator resource for:", address);
-    
+
     const creatorScript = `
       import FlowTip from 0x6c1b12e35dca8863
       
@@ -358,13 +379,13 @@ export const debugCreatorResource = async (address: string) => {
         }
       }
     `;
-    
+
     const creatorInfo = await fcl.query({
       cadence: creatorScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)]
+      args: (arg: any, t: any) => [arg(address, t.Address)],
     });
     console.log("🎨 Creator info:", creatorInfo);
-    
+
     return creatorInfo;
   } catch (error) {
     console.error("❌ Creator debug error:", error);
@@ -372,16 +393,14 @@ export const debugCreatorResource = async (address: string) => {
   }
 };
 
-
-
 export const withdrawTips = async (amount: number) => {
   try {
     console.log("🏦 Starting withdrawal transaction...", { amount });
-    
+
     // Debug: Check user authentication first
     const currentUser = await fcl.currentUser.snapshot();
     console.log("👤 Current user:", currentUser);
-    
+
     if (!currentUser.loggedIn) {
       throw new Error("User not logged in");
     }
@@ -406,21 +425,27 @@ export const withdrawTips = async (amount: number) => {
         }
       }
     `;
-    
+
     try {
       const creatorInfo = await fcl.query({
         cadence: checkCreatorScript,
-        args: (arg: any, t: any) => [arg(currentUser.addr, t.Address)]
+        args: (arg: any, t: any) => [arg(currentUser.addr, t.Address)],
       });
       console.log("🎨 Creator withdrawal info:", creatorInfo);
-      
+
       if (!creatorInfo) {
-        throw new Error("Creator resource not found. Please ensure you have a creator profile set up.");
+        throw new Error(
+          "Creator resource not found. Please ensure you have a creator profile set up."
+        );
       }
-      
-      const availableBalance = parseFloat(creatorInfo.totalTipped || '0');
+
+      const availableBalance = parseFloat(creatorInfo.totalTipped || "0");
       if (availableBalance < amount) {
-        throw new Error(`Insufficient balance. Available: ${availableBalance.toFixed(2)} FLOW, Requested: ${amount.toFixed(2)} FLOW`);
+        throw new Error(
+          `Insufficient balance. Available: ${availableBalance.toFixed(
+            2
+          )} FLOW, Requested: ${amount.toFixed(2)} FLOW`
+        );
       }
     } catch (balanceError) {
       console.error("❌ Error checking creator balance:", balanceError);
@@ -453,9 +478,7 @@ export const withdrawTips = async (amount: number) => {
           }
         }
       `,
-      args: (arg: any, t: any) => [
-        arg(amount.toFixed(8), t.UFix64)
-      ],
+      args: (arg: any, t: any) => [arg(amount.toFixed(8), t.UFix64)],
       payer: fcl.authz,
       proposer: fcl.authz,
       authorizations: [fcl.authz],
@@ -463,12 +486,12 @@ export const withdrawTips = async (amount: number) => {
     });
 
     console.log("✅ Withdrawal transaction submitted:", transactionId);
-    
+
     // Debug: Monitor transaction status
     console.log("⏳ Waiting for withdrawal transaction to be sealed...");
     const result = await fcl.tx(transactionId).onceSealed();
     console.log("🎉 Withdrawal transaction sealed:", result);
-    
+
     // Debug: Check if transaction was successful
     if (result.status === 4) {
       console.log("✅ Withdrawal successful!");
@@ -477,10 +500,9 @@ export const withdrawTips = async (amount: number) => {
       console.error("❌ Withdrawal failed with status:", result.status);
       throw new Error(`Withdrawal failed with status: ${result.status}`);
     }
-    
   } catch (error: any) {
     console.error("❌ Error withdrawing tips:", error);
-    
+
     // Enhanced error logging for debugging
     if (error.message) {
       console.error("📝 Withdrawal error message:", error.message);
@@ -488,7 +510,7 @@ export const withdrawTips = async (amount: number) => {
     if (error.stack) {
       console.error("📋 Withdrawal error stack:", error.stack);
     }
-    
+
     throw error;
   }
 };
@@ -496,8 +518,10 @@ export const withdrawTips = async (amount: number) => {
 // 🛠️ ALTERNATIVE: Fallback transaction in case contract doesn't have withdraw function yet
 export const withdrawTipsLegacy = async (amount: number) => {
   try {
-    console.log("🏦 Starting legacy withdrawal (for old contract)...", { amount });
-    
+    console.log("🏦 Starting legacy withdrawal (for old contract)...", {
+      amount,
+    });
+
     const currentUser = await fcl.currentUser.snapshot();
     if (!currentUser.loggedIn) {
       throw new Error("User not logged in");
@@ -526,9 +550,7 @@ export const withdrawTipsLegacy = async (amount: number) => {
           }
         }
       `,
-      args: (arg: any, t: any) => [
-        arg(amount.toFixed(8), t.UFix64)
-      ],
+      args: (arg: any, t: any) => [arg(amount.toFixed(8), t.UFix64)],
       payer: fcl.authz,
       proposer: fcl.authz,
       authorizations: [fcl.authz],
@@ -536,13 +558,12 @@ export const withdrawTipsLegacy = async (amount: number) => {
     });
 
     const result = await fcl.tx(transactionId).onceSealed();
-    
+
     if (result.status === 4) {
       return result;
     } else {
       throw new Error(`Legacy withdrawal failed with status: ${result.status}`);
     }
-    
   } catch (error: any) {
     console.error("❌ Error in legacy withdrawal:", error);
     throw error;
@@ -552,24 +573,35 @@ export const withdrawTipsLegacy = async (amount: number) => {
 // 🛠️ SMART: Auto-detecting withdrawal function that tries both approaches
 export const smartWithdrawTips = async (amount: number) => {
   try {
-    console.log("🧠 Starting smart withdrawal (tries new then old approach)...", { amount });
-    
+    console.log(
+      "🧠 Starting smart withdrawal (tries new then old approach)...",
+      { amount }
+    );
+
     // First, try the new contract approach
     try {
       return await withdrawTips(amount);
     } catch (newError: any) {
-      console.log("📱 New contract approach failed, trying legacy:", newError.message);
-      
+      console.log(
+        "📱 New contract approach failed, trying legacy:",
+        newError.message
+      );
+
       // If new approach fails, try legacy (this will also fail but with better error message)
-      if (newError.message?.includes("does not have member `withdraw`") || 
-          newError.message?.includes("member of type `FlowTip.Creator` is not accessible")) {
-        throw new Error("Contract update required: Your FlowTip contract needs a 'withdraw' function. Please deploy the updated contract first.");
+      if (
+        newError.message?.includes("does not have member `withdraw`") ||
+        newError.message?.includes(
+          "member of type `FlowTip.Creator` is not accessible"
+        )
+      ) {
+        throw new Error(
+          "Contract update required: Your FlowTip contract needs a 'withdraw' function. Please deploy the updated contract first."
+        );
       }
-      
+
       // Re-throw the original error
       throw newError;
     }
-    
   } catch (error: any) {
     console.error("❌ Smart withdrawal failed:", error);
     throw error;
@@ -577,7 +609,9 @@ export const smartWithdrawTips = async (amount: number) => {
 };
 
 // 🛠️ HELPER FUNCTION: Get withdrawable balance (updated for new contract)
-export const getWithdrawableBalance = async (creatorAddress: string): Promise<number> => {
+export const getWithdrawableBalance = async (
+  creatorAddress: string
+): Promise<number> => {
   try {
     const balanceScript = `
       import FlowTip from 0x6c1b12e35dca8863
@@ -593,13 +627,13 @@ export const getWithdrawableBalance = async (creatorAddress: string): Promise<nu
         }
       }
     `;
-    
+
     const balance = await fcl.query({
       cadence: balanceScript,
-      args: (arg: any, t: any) => [arg(creatorAddress, t.Address)]
+      args: (arg: any, t: any) => [arg(creatorAddress, t.Address)],
     });
-    
-    return parseFloat(balance || '0');
+
+    return parseFloat(balance || "0");
   } catch (error) {
     console.error("❌ Error getting withdrawable balance:", error);
     return 0;
@@ -610,7 +644,7 @@ export const getWithdrawableBalance = async (creatorAddress: string): Promise<nu
 export const checkContractVersion = async (address: string) => {
   try {
     console.log("🔍 Checking if contract has withdraw function...", address);
-    
+
     const checkScript = `
       import FlowTip from 0x6c1b12e35dca8863
       
@@ -632,12 +666,12 @@ export const checkContractVersion = async (address: string) => {
         return result
       }
     `;
-    
+
     const info = await fcl.query({
       cadence: checkScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)]
+      args: (arg: any, t: any) => [arg(address, t.Address)],
     });
-    
+
     console.log("🔍 Contract version check:", info);
     return info;
   } catch (error) {
@@ -650,7 +684,7 @@ export const checkContractVersion = async (address: string) => {
 export const debugContractStructure = async (address: string) => {
   try {
     console.log("🔍 Debugging contract structure for:", address);
-    
+
     const debugScript = `
       import FlowTip from 0x6c1b12e35dca8863
       import FlowToken from 0x1654653399040a61
@@ -689,12 +723,12 @@ export const debugContractStructure = async (address: string) => {
         return result
       }
     `;
-    
+
     const debugInfo = await fcl.query({
       cadence: debugScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)]
+      args: (arg: any, t: any) => [arg(address, t.Address)],
     });
-    
+
     console.log("🔍 Contract structure debug:", debugInfo);
     return debugInfo;
   } catch (error) {

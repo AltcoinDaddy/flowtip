@@ -5,6 +5,13 @@ import { Toaster } from "react-hot-toast";
 import Footer from "@/components/layout/footer";
 import "./globals.css";
 
+import * as fcl from "@onflow/fcl"
+import CreatorFixNotification from "@/components/fix-notification";
+
+if (typeof window !== 'undefined') {
+  (window as any).fcl = fcl;
+}
+
 const montserrat = Montserrat({
   subsets: ["latin"],
 });
@@ -28,7 +35,6 @@ export default function RootLayout({
           <Toaster
             position="top-center"
             toastOptions={{
-              duration: 4000,
               style: {
                 background: "#363636",
                 color: "#fff",
@@ -51,6 +57,8 @@ export default function RootLayout({
               },
             }}
           />
+
+          <CreatorFixNotification />
         </AuthProvider>
       </body>
     </html>

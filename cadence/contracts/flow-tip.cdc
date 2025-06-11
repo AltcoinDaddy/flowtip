@@ -1,4 +1,33 @@
 access(all) contract FlowTip {
+    // ✅ ADD THIS: CreatorInfo struct (REQUIRED for scripts to work)
+    access(all) struct CreatorInfo {
+        access(all) let id: UInt64
+        access(all) let address: Address
+        access(all) let name: String
+        access(all) let description: String
+        access(all) let imageURL: String
+        access(all) let tipCount: UInt64
+        access(all) let totalTipped: UFix64
+
+        init(
+            id: UInt64,
+            address: Address,
+            name: String,
+            description: String,
+            imageURL: String,
+            tipCount: UInt64,
+            totalTipped: UFix64
+        ) {
+            self.id = id
+            self.address = address
+            self.name = name
+            self.description = description
+            self.imageURL = imageURL
+            self.tipCount = tipCount
+            self.totalTipped = totalTipped
+        }
+    }
+
     // Define the Creator resource that creators will own
     access(all) resource Creator {
         access(all) let id: UInt64
@@ -133,14 +162,77 @@ access(all) contract FlowTip {
         emit CreatorRegistered(id: 0, address: self.account.address)
     }
 
-    // Register a new creator - simplified version
-    access(all) fun registerCreator(name: String, description: String, imageURL: String): UInt64 {
+    // ✅ CHANGE THIS: Fix registerCreator to take address parameter (YOUR SCRIPTS EXPECT THIS)
+    access(all) fun registerCreator(address: Address): UInt64 {
         let creatorID = self.nextCreatorID
-        self.registeredCreators[self.account.address] = creatorID
+        self.registeredCreators[address] = creatorID
         self.nextCreatorID = self.nextCreatorID + 1
         
-        emit CreatorRegistered(id: creatorID, address: self.account.address)
+        emit CreatorRegistered(id: creatorID, address: address)
         return creatorID
+    }
+
+    // ✅ ADD THIS: Required function that scripts call
+    access(all) view fun isCreatorRegistered(address: Address): Bool {
+        return self.registeredCreators[address] != nil
+    }
+
+    // ✅ FIXED: Remove 'view' keyword to allow impure operations
+    access(all) fun getCreatorInfo(address: Address): CreatorInfo? {
+        if !self.isCreatorRegistered(address: address) {
+            return nil
+        }
+        
+        let account = getAccount(address)
+        let creatorCap = account.capabilities.get<&Creator>(self.CreatorPublicPath)
+        
+        if !creatorCap.check() {
+            return nil
+        }
+        
+        if let creatorRef = creatorCap.borrow() {
+            return CreatorInfo(
+                id: creatorRef.id,
+                address: address,
+                name: creatorRef.name,
+                description: creatorRef.description,
+                imageURL: creatorRef.imageURL,
+                tipCount: creatorRef.tipCount,
+                totalTipped: creatorRef.totalTipped
+            )
+        }
+        
+        return nil
+    }
+
+    // ✅ FIXED: Remove 'view' keyword to allow impure operations
+    access(all) fun getAllCreators(): [CreatorInfo] {
+        let creators: [CreatorInfo] = []
+        
+        for address in self.registeredCreators.keys {
+            if let creatorInfo = self.getCreatorInfo(address: address) {
+                creators.append(creatorInfo)
+            }
+        }
+        
+        return creators
+    }
+
+    // ✅ FIXED: Remove 'view' keyword from functions that call getAllCreators()
+    access(all) fun getCreatorsPaginated(offset: UInt64, limit: UInt64): [CreatorInfo] {
+        return self.getAllCreators() // Simple implementation for now
+    }
+
+    access(all) fun getTopCreators(limit: UInt64): [CreatorInfo] {
+        return self.getAllCreators() // Simple implementation for now
+    }
+
+    access(all) fun searchCreators(query: String): [CreatorInfo] {
+        return self.getAllCreators() // Simple implementation for now
+    }
+
+    access(all) view fun getCreatorCount(): Int {
+        return self.registeredCreators.keys.length
     }
 
     // Get a list of all registered creators

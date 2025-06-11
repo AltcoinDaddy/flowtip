@@ -246,3 +246,79 @@ export const getCreatorTips = async (address: string): Promise<Tip[]> => {
     return [];
   }
 };
+
+
+// Debug script to check creator storage issues
+export const debugCreatorStorage = async () => {
+  try {
+    console.log('🔍 Debugging creator storage...\n');
+    
+    // 1. Check total registered creators
+    const registeredCreators = await fcl.query({
+      cadence: `
+        import FlowTip from 0x6c1b12e35dca8863
+        
+        access(all) fun main(): {Address: UInt64} {
+          return FlowTip.getRegisteredCreators()
+        }
+      `,
+    });
+    
+    console.log('📋 Registered creators in contract:', Object.keys(registeredCreators).length);
+    console.log('Registry:', registeredCreators);
+    
+    // 2. Check each creator's actual storage
+    for (const [address, id] of Object.entries(registeredCreators)) {
+      console.log(`\n👤 Checking creator ${address} (ID: ${id})`);
+      
+      try {
+        // Check if they have the Creator resource
+        const hasResource = await fcl.query({
+          cadence: `
+            import FlowTip from 0x6c1b12e35dca8863
+            
+            access(all) fun main(address: Address): Bool {
+              let account = getAccount(address)
+              let creatorCap = account.capabilities.get<&FlowTip.Creator>(FlowTip.CreatorPublicPath)
+              return creatorCap.check()
+            }
+          `,
+          args: (arg, t) => [arg(address, t.Address)]
+        });
+        
+        console.log(`  📦 Has Creator resource: ${hasResource}`);
+        
+        if (hasResource) {
+          // Try to get their info
+          const creatorInfo = await fcl.query({
+            cadence: `
+              import FlowTip from 0x6c1b12e35dca8863
+              
+              access(all) fun main(address: Address): FlowTip.CreatorInfo? {
+                return FlowTip.getCreatorInfo(address: address)
+              }
+            `,
+            args: (arg, t) => [arg(address, t.Address)]
+          });
+          
+          if (creatorInfo) {
+            console.log(`  ✅ Creator data: ${creatorInfo.name} (Tips: ${creatorInfo.tipCount})`);
+          } else {
+            console.log(`  ❌ Creator resource exists but getCreatorInfo() failed`);
+          }
+        } else {
+          console.log(`  ❌ Missing Creator resource in account storage`);
+        }
+        
+      } catch (error: any) {
+        console.log(`  ❌ Error checking creator: ${error?.message}`);
+      }
+    }
+    
+  } catch (error) {
+    console.error('❌ Debug failed:', error);
+  }
+};
+
+// Run the debug
+debugCreatorStorage();
