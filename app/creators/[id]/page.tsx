@@ -29,6 +29,8 @@ export default function CreatorProfilePage({ params }: { params: { id: string } 
         console.log("Creator", creatorData)
         
         const tipsData = await getCreatorTips(params.id);
+
+        console.log(tipsData)
         setTips(tipsData);
       } catch (error) {
         console.error("Error fetching creator data:", error);

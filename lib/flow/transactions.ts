@@ -133,7 +133,6 @@ export const registerCreator = async (
   }
 };
 
-// Send a tip to a creator - BASIC VERSION
 export const sendTip = async (
   recipientAddress: string,
   amount: number,
@@ -146,7 +145,6 @@ export const sendTip = async (
       message,
     });
 
-    // Debug: Check user authentication first
     const currentUser = await fcl.currentUser.snapshot();
     console.log("👤 Current user:", currentUser);
 
@@ -154,14 +152,14 @@ export const sendTip = async (
       throw new Error("User not logged in");
     }
 
-    // Debug: Check balance before transaction
+    // Check balance
     const balanceScript = `
       import FlowToken from 0x1654653399040a61
       import FungibleToken from 0xf233dcee88fe0abe
       
       access(all) fun main(address: Address): UFix64 {
         let account = getAccount(address)
-        let vaultRef = account.capabilities.get<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance)
+        let vaultRef = account.capabilities.get<&{FungibleToken.Balance}>(/public/flowTokenBalance)
           .borrow()
           ?? panic("Could not borrow Balance reference to the Vault")
         return vaultRef.balance
@@ -184,212 +182,124 @@ export const sendTip = async (
       console.warn("⚠️ Could not check balance:", balanceError);
     }
 
-    // Debug: Verify recipient exists and has Creator resource
+    // Check if recipient is registered
     const checkRecipientScript = `
       import FlowTip from 0x6c1b12e35dca8863
       
       access(all) fun main(address: Address): Bool {
-        let account = getAccount(address)
-        let creatorRef = account.capabilities.get<&FlowTip.Creator>(FlowTip.CreatorPublicPath)
-          .borrow()
-        return creatorRef != nil
+        return FlowTip.isCreatorRegistered(address: address)
       }
     `;
 
     try {
-      const hasCreator = await fcl.query({
+      const isRegistered = await fcl.query({
         cadence: checkRecipientScript,
         args: (arg: any, t: any) => [arg(recipientAddress, t.Address)],
       });
-      console.log("🎯 Recipient has Creator resource:", hasCreator);
+      console.log("🎯 Recipient is registered:", isRegistered);
 
-      if (!hasCreator) {
-        throw new Error("Recipient does not have a Creator resource set up");
+      if (!isRegistered) {
+        throw new Error("Recipient is not a registered creator");
       }
     } catch (recipientError) {
       console.error("❌ Error checking recipient:", recipientError);
-      throw new Error("Could not verify recipient's Creator resource");
+      throw new Error("Could not verify recipient registration");
     }
 
-    // FIXED TRANSACTION: Proper authorization for withdraw
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import FlowToken from 0x1654653399040a61
-        import FungibleToken from 0xf233dcee88fe0abe
-        import FlowTip from 0x6c1b12e35dca8863
+    console.log("📝 Submitting transaction with tip recording...");
+    console.log("🔄 About to call fcl.mutate with FULL tip transaction...");
 
-        transaction(recipient: Address, amount: UFix64, message: String) {
+    // 🎉 COMPLETE TRANSACTION: Payment + Tip Recording
+    const transactionId = await Promise.race([
+      fcl.mutate({
+        cadence: `
+           import FlowToken from 0x1654653399040a61
+          import FungibleToken from 0xf233dcee88fe0abe
+          import FlowTip from 0x6c1b12e35dca8863
 
-          prepare(signer: auth(Storage) &Account) {
-            // 🔧 FIXED: Borrow vault with proper Provider authorization
-            let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
-              ?? panic("Could not borrow reference to the sender's vault")
-            
-            // Withdraw tokens from the sender's vault
-            let payment <- vaultRef.withdraw(amount: amount)
-            
-            // Get a reference to the recipient's Creator resource
-            let recipientCreator = getAccount(recipient)
-              .capabilities.get<&FlowTip.Creator>(FlowTip.CreatorPublicPath)
-              .borrow()
-              ?? panic("Could not borrow a reference to the Creator")
-            
-            // Get a reference to the recipient's Flow token vault
-            let recipientVault = getAccount(recipient)
-              .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
-              .borrow()
-              ?? panic("Could not borrow a reference to the recipient's vault")
-                
-            // Deposit the withdrawn tokens into the recipient's vault
-            recipientVault.deposit(from: <-payment)
-            
-            // Record tip information in the creator's resource
-            recipientCreator.receiveTip(amount: amount, from: signer.address, message: message)
-            
-            // Debug: Log successful completion
-            log("✅ Tip sent successfully: ".concat(amount.toString()).concat(" FLOW"))
+          transaction(recipient: Address, amount: UFix64, message: String) {
+            prepare(signer: auth(Storage) &Account) {
+              log("🚀 Starting complete tip transaction")
+              
+              // Verify recipient is registered
+              if !FlowTip.isCreatorRegistered(address: recipient) {
+                panic("Recipient is not registered")
+              }
+              log("✅ Recipient verified as registered creator")
+              
+              // Get sender's vault
+              let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(from: /storage/flowTokenVault)
+                ?? panic("Could not borrow sender's vault")
+              log("✅ Sender vault accessed")
+              
+              // Withdraw payment
+              let payment <- vaultRef.withdraw(amount: amount)
+              log("✅ Payment withdrawn: ".concat(amount.toString()))
+              
+              // Get recipient's Flow vault
+              let recipientVault = getAccount(recipient)
+                .capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver)
+                .borrow()
+                ?? panic("Could not borrow recipient's vault")
+              log("✅ Recipient vault accessed")
+              
+              // Deposit payment
+              recipientVault.deposit(from: <-payment)
+              log("✅ Payment deposited successfully")
+              
+              // 🎉 RECORD THE TIP in Creator resource
+              let creatorRef = getAccount(recipient)
+                .capabilities.get<&FlowTip.Creator>(FlowTip.CreatorPublicPath)
+                .borrow()
+                ?? panic("Could not borrow Creator reference")
+              log("✅ Creator reference borrowed")
+              
+              creatorRef.addTip(amount: amount, from: signer.address, message: message)
+              log("🎉 Tip recorded in Creator resource!")
+              
+              log("✅ Complete tip transaction finished: payment sent AND tip recorded")
+            }
           }
-        }
-      `,
-      args: (arg: any, t: any) => [
-        arg(recipientAddress, t.Address),
-        arg(amount.toFixed(8), t.UFix64),
-        arg(message, t.String),
-      ],
-      payer: fcl.authz,
-      proposer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 300,
-    });
+        `,
+        args: (arg: any, t: any) => [
+          arg(recipientAddress, t.Address),
+          arg(amount.toFixed(8), t.UFix64),
+          arg(message, t.String),
+        ],
+        proposer: fcl.currentUser,
+        payer: fcl.currentUser,
+        authorizations: [fcl.currentUser],
+        limit: 300,
+      }),
+      // Add 30 second timeout
+      new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Transaction submission timeout after 30 seconds")), 30000)
+      )
+    ]);
 
-    console.log("✅ Tip transaction submitted:", transactionId);
-
-    // Debug: Monitor transaction status
-    console.log("⏳ Waiting for transaction to be sealed...");
-    const result = await fcl.tx(transactionId).onceSealed();
-    console.log("🎉 Tip transaction sealed:", result);
-
-    // Debug: Check if transaction was successful
+    console.log("✅ Transaction submitted:", transactionId);
+    
+    const result = await fcl.tx(`${transactionId}`).onceSealed();
+    console.log("🎉 Transaction sealed:", result);
+    
     if (result.status === 4) {
-      console.log("✅ Transaction successful!");
+      console.log("🎉 TIP SENT AND RECORDED SUCCESSFULLY!");
       return result;
     } else {
       console.error("❌ Transaction failed with status:", result.status);
+      console.error("📋 Transaction result:", result);
       throw new Error(`Transaction failed with status: ${result.status}`);
     }
   } catch (error: any) {
-    console.error("❌ Error sending tip:", error);
-
-    // Enhanced error logging for debugging
-    if (error.message) {
-      console.error("📝 Error message:", error.message);
+    console.error("❌ Error:", error);
+    
+    // 🔧 SPECIFIC ERROR HANDLING
+    if (error.message?.includes("timeout")) {
+      console.error("⏰ TIMEOUT: Check if wallet popup appeared!");
+      console.error("💡 Try: 1) Check for blocked popups 2) Refresh wallet connection 3) Check network");
     }
-    if (error.stack) {
-      console.error("📋 Error stack:", error.stack);
-    }
-    if (error.cause) {
-      console.error("🔍 Error cause:", error.cause);
-    }
-
+    
     throw error;
-  }
-};
-
-// 🛠️ DEBUGGING HELPER FUNCTIONS
-
-export const debugFlowAccount = async (address: string) => {
-  try {
-    console.log("🔍 Debugging Flow account:", address);
-
-    // Check if account exists
-    const accountScript = `
-      access(all) fun main(address: Address): Bool {
-        let account = getAccount(address)
-        return true
-      }
-    `;
-
-    const exists = await fcl.query({
-      cadence: accountScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)],
-    });
-    console.log("✅ Account exists:", exists);
-
-    // Check FlowToken vault
-    const vaultScript = `
-      import FlowToken from 0x1654653399040a61
-      import FungibleToken from 0xf233dcee88fe0abe
-      
-      access(all) fun main(address: Address): {String: AnyStruct} {
-        let account = getAccount(address)
-        let result: {String: AnyStruct} = {}
-        
-        // Check balance capability
-        if let balanceRef = account.capabilities.get<&FlowToken.Vault{FungibleToken.Balance}>(/public/flowTokenBalance).borrow() {
-          result["balance"] = balanceRef.balance
-          result["hasBalanceCapability"] = true
-        } else {
-          result["hasBalanceCapability"] = false
-        }
-        
-        // Check receiver capability
-        if let receiverRef = account.capabilities.get<&{FungibleToken.Receiver}>(/public/flowTokenReceiver).borrow() {
-          result["hasReceiverCapability"] = true
-        } else {
-          result["hasReceiverCapability"] = false
-        }
-        
-        return result
-      }
-    `;
-
-    const vaultInfo = await fcl.query({
-      cadence: vaultScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)],
-    });
-    console.log("💰 Vault info:", vaultInfo);
-
-    return vaultInfo;
-  } catch (error) {
-    console.error("❌ Debug error:", error);
-    return null;
-  }
-};
-
-export const debugCreatorResource = async (address: string) => {
-  try {
-    console.log("🎨 Debugging Creator resource for:", address);
-
-    const creatorScript = `
-      import FlowTip from 0x6c1b12e35dca8863
-      
-      access(all) fun main(address: Address): {String: AnyStruct}? {
-        let account = getAccount(address)
-        let result: {String: AnyStruct} = {}
-        
-        if let creatorRef = account.capabilities.get<&FlowTip.Creator>(FlowTip.CreatorPublicPath).borrow() {
-          result["hasCreator"] = true
-          result["name"] = creatorRef.name
-          result["description"] = creatorRef.description
-          result["tipCount"] = creatorRef.tipCount
-          result["totalTipped"] = creatorRef.totalTipped
-          return result
-        } else {
-          return nil
-        }
-      }
-    `;
-
-    const creatorInfo = await fcl.query({
-      cadence: creatorScript,
-      args: (arg: any, t: any) => [arg(address, t.Address)],
-    });
-    console.log("🎨 Creator info:", creatorInfo);
-
-    return creatorInfo;
-  } catch (error) {
-    console.error("❌ Creator debug error:", error);
-    return null;
   }
 };
 
@@ -511,99 +421,6 @@ export const withdrawTips = async (amount: number) => {
       console.error("📋 Withdrawal error stack:", error.stack);
     }
 
-    throw error;
-  }
-};
-
-// 🛠️ ALTERNATIVE: Fallback transaction in case contract doesn't have withdraw function yet
-export const withdrawTipsLegacy = async (amount: number) => {
-  try {
-    console.log("🏦 Starting legacy withdrawal (for old contract)...", {
-      amount,
-    });
-
-    const currentUser = await fcl.currentUser.snapshot();
-    if (!currentUser.loggedIn) {
-      throw new Error("User not logged in");
-    }
-
-    const transactionId = await fcl.mutate({
-      cadence: `
-        import FlowTip from 0x6c1b12e35dca8863
-
-        transaction(withdrawAmount: UFix64) {
-          
-          prepare(signer: auth(Storage) &Account) {
-            // This will only work if you haven't updated your contract yet
-            let creatorRef = signer.storage.borrow<&FlowTip.Creator>(
-              from: FlowTip.CreatorStoragePath
-            ) ?? panic("Could not borrow Creator resource from storage")
-            
-            // Check balance
-            if creatorRef.totalTipped < withdrawAmount {
-              panic("Insufficient balance. Available: ".concat(creatorRef.totalTipped.toString()).concat(", Requested: ").concat(withdrawAmount.toString()))
-            }
-            
-            // This approach will fail if totalTipped has 'all' access
-            // You need to update your contract first
-            panic("Legacy withdrawal not supported. Please update your FlowTip contract with a withdraw function.")
-          }
-        }
-      `,
-      args: (arg: any, t: any) => [arg(amount.toFixed(8), t.UFix64)],
-      payer: fcl.authz,
-      proposer: fcl.authz,
-      authorizations: [fcl.authz],
-      limit: 300,
-    });
-
-    const result = await fcl.tx(transactionId).onceSealed();
-
-    if (result.status === 4) {
-      return result;
-    } else {
-      throw new Error(`Legacy withdrawal failed with status: ${result.status}`);
-    }
-  } catch (error: any) {
-    console.error("❌ Error in legacy withdrawal:", error);
-    throw error;
-  }
-};
-
-// 🛠️ SMART: Auto-detecting withdrawal function that tries both approaches
-export const smartWithdrawTips = async (amount: number) => {
-  try {
-    console.log(
-      "🧠 Starting smart withdrawal (tries new then old approach)...",
-      { amount }
-    );
-
-    // First, try the new contract approach
-    try {
-      return await withdrawTips(amount);
-    } catch (newError: any) {
-      console.log(
-        "📱 New contract approach failed, trying legacy:",
-        newError.message
-      );
-
-      // If new approach fails, try legacy (this will also fail but with better error message)
-      if (
-        newError.message?.includes("does not have member `withdraw`") ||
-        newError.message?.includes(
-          "member of type `FlowTip.Creator` is not accessible"
-        )
-      ) {
-        throw new Error(
-          "Contract update required: Your FlowTip contract needs a 'withdraw' function. Please deploy the updated contract first."
-        );
-      }
-
-      // Re-throw the original error
-      throw newError;
-    }
-  } catch (error: any) {
-    console.error("❌ Smart withdrawal failed:", error);
     throw error;
   }
 };

@@ -1,3 +1,6 @@
+"use client"
+
+
 import React, { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -6,6 +9,7 @@ import { Textarea } from '../ui/textarea';
 import { Creator } from '../../lib/flow/scripts';
 import { sendTip } from '../../lib/flow/transactions';
 import { Coins, Heart, Send, CheckCircle2, AlertCircle, Loader2, DollarSign, MessageCircle, X } from 'lucide-react';
+import { runFullDiagnostics } from '../../lib/flow/debug';
 import toast from 'react-hot-toast';
 
 interface TipModalProps {
@@ -19,6 +23,14 @@ const TipModal: React.FC<TipModalProps> = ({ creator, onClose }) => {
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
   const [validationError, setValidationError] = useState<string | null>(null);
+
+
+
+
+useEffect(() => {
+  (window as any).debugFlow = runFullDiagnostics;
+  console.log("💡 Debug available: window.debugFlow()");
+}, []);
 
   // Predefined tip amounts for quick selection
   const quickAmounts = ['1.0', '5.0', '10.0', '25.0'];

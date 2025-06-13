@@ -29,7 +29,7 @@ access(all) contract FlowTip {
     }
 
     // Define the Creator resource that creators will own
-    access(all) resource Creator {
+    access(all) resource Creator: CreatorPublic {
         access(all) let id: UInt64
         access(all) var name: String
         access(all) var description: String
@@ -64,6 +64,10 @@ access(all) contract FlowTip {
             self.nextTipID = self.nextTipID + 1
             self.tipCount = self.tipCount + 1
             self.totalTipped = self.totalTipped + amount
+        }
+
+         access(all) fun addTip(amount: UFix64, from: Address, message: String) {
+            self.receiveTip(amount: amount, from: from, message: message)
         }
 
         // 🆕 NEW: Withdraw tips function

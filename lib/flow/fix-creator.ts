@@ -96,7 +96,7 @@ export const fixExistingCreator = async (): Promise<TransactionResult> => {
       proposer: fcl.currentUser,
       payer: fcl.currentUser,
       authorizations: [fcl.currentUser],
-      limit: 50000,
+      limit: 9999,
     });
 
     console.log("✅ Fix transaction submitted:", transactionId);
