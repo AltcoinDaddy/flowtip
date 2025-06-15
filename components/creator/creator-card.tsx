@@ -5,17 +5,14 @@ import Link from 'next/link';
 import { Button } from '../ui/button';
 import { Creator } from '@/lib/flow/scripts';
 import { Coins, Heart, User } from 'lucide-react';
+import { formatAmount } from '@/utils';
+import Image from 'next/image';
 
 interface CreatorCardProps {
   creator: Creator;
 }
 
 const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
-  const formatAmount = (amount: any): string => {
-    if (amount === null || amount === undefined) return '0.00';
-    const num = typeof amount === 'number' ? amount : parseFloat(amount);
-    return isNaN(num) ? '0.00' : num.toFixed(2);
-  };
 
   return (
     <Card className="group relative overflow-hidden bg-white border text-black shadow-lg :shadow-2xl transition-all duration-500 :-translate-y-2 backdrop-blur-sm">
@@ -27,7 +24,7 @@ const CreatorCard: React.FC<CreatorCardProps> = ({ creator }) => {
         <div className="flex items-start space-x-4">
           <div className="relative">
             <Avatar className="h-16 w-16 ring-4 ring-white shadow-lg transition-transform duration-300 group-hover:scale-110">
-              <img 
+              <Image
                 src={creator.imageURL || `https://api.dicebear.com/9.x/adventurer/svg?seed=${creator.name}`} 
                 alt={creator.name}
                 className="object-cover"
