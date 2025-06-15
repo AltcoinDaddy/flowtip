@@ -1,6 +1,12 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import * as fcl from "@onflow/fcl";
 import "../lib/flow/config";
 import { supabase } from "@/utils/supabase/client";
@@ -34,8 +40,11 @@ type AuthContextType = {
   isCheckingCreator: boolean;
   creator: BlockchainCreator | null;
   refreshCreatorData: () => Promise<void>;
-  uploadFile: (file: File, fileType: 'avatar' | 'banner') => Promise<{ success: boolean; url?: string; error?: string }>;
-  
+  uploadFile: (
+    file: File,
+    fileType: "avatar" | "banner"
+  ) => Promise<{ success: boolean; url?: string; error?: string }>;
+
   // Public creator queries
   getAllCreators: () => Promise<PublicCreatorInfo[]>;
   getTopCreators: (limit: number) => Promise<PublicCreatorInfo[]>;
@@ -53,7 +62,7 @@ interface BlockchainCreator {
   imageURL?: string;
   createdAt: string;
   totalTipped?: string; // Add totalTipped
-  tipCount?: number;    // Add tipCount
+  tipCount?: number; // Add tipCount
 }
 
 interface CreatorRegistrationData {
@@ -74,8 +83,8 @@ const AuthContext = createContext<AuthContextType>({
   isCheckingCreator: false,
   creator: null,
   refreshCreatorData: async () => {},
-  uploadFile: async () => ({ success: false, error: 'Not implemented' }),
-  
+  uploadFile: async () => ({ success: false, error: "Not implemented" }),
+
   // Public creator query defaults
   getAllCreators: async () => [],
   getTopCreators: async () => [],
@@ -101,7 +110,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isCheckingCreator, setIsCheckingCreator] = useState<boolean>(false);
   // 🆕 ADD: Missing state variable
-  const [needsRegistrationFix, setNeedsRegistrationFix] = useState<boolean>(false);
+  const [needsRegistrationFix, setNeedsRegistrationFix] =
+    useState<boolean>(false);
 
   useEffect(() => {
     const unsubscribe = fcl.currentUser.subscribe((user: User) => {
@@ -127,11 +137,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Store user in Supabase for analytics
   const storeUserInSupabase = async (address: string) => {
     try {
-      console.log('🔗 Storing user analytics in Supabase...', address);
-      const result = await supabase.rpc('connect_wallet', {
-        wallet_addr: address
+      console.log("🔗 Storing user analytics in Supabase...", address);
+      const result = await supabase.rpc("connect_wallet", {
+        wallet_addr: address,
       });
-      console.log('✅ User analytics stored in Supabase:', result);
+      console.log("✅ User analytics stored in Supabase:", result);
     } catch (error) {
       console.error("❌ Error storing user analytics:", error);
     }
@@ -139,13 +149,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logIn = async () => {
     try {
-      console.log('🔑 Initiating Flow wallet login...');
+      console.log("🔑 Initiating Flow wallet login...");
       setIsLoading(true);
       await fcl.authenticate();
-      toast.success("🔗 Wallet connected successfully!");
     } catch (error) {
       console.error("❌ Error during authentication:", error);
-      toast.error('Failed to connect wallet');
+      toast.error("Failed to connect wallet");
       setIsLoading(false);
       throw error;
     }
@@ -153,17 +162,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logOut = async () => {
     try {
-      console.log('👋 Logging out...');
+      console.log("👋 Logging out...");
       setIsLoading(true);
       await fcl.unauthenticate();
       setUser(initialUser);
       setIsCreator(false);
       setCreator(null);
       setNeedsRegistrationFix(false); // Reset fix flag
-      toast.success('👋 Wallet disconnected');
+      toast.success("👋 Wallet disconnected");
     } catch (error) {
       console.error("❌ Error during logout:", error);
-      toast.error('Failed to disconnect wallet');
+      toast.error("Failed to disconnect wallet");
       throw error;
     } finally {
       setIsLoading(false);
@@ -171,7 +180,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   // 🆕 NEW: Check if user has creator resource but isn't registered
-  const checkCreatorResourceExists = async (address: string): Promise<boolean> => {
+  const checkCreatorResourceExists = async (
+    address: string
+  ): Promise<boolean> => {
     try {
       const hasResource = await fcl.query({
         cadence: `
@@ -223,26 +234,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const hasResource = await checkCreatorResourceExists(address);
 
       if (hasResource) {
-        console.log("🚨 FOUND ISSUE: User has creator resource but not registered!");
-        
+        console.log(
+          "🚨 FOUND ISSUE: User has creator resource but not registered!"
+        );
+
         // 🆕 CHANGED: Don't auto-fix, just notify user and set flag
         setNeedsRegistrationFix(true);
         toast.error(
-          "⚠️ Your creator account needs to be fixed. Please use the fix button that will appear.", 
-          { 
-            id: 'creator-needs-fix',
-            duration: 15000
+          "⚠️ Your creator account needs to be fixed. Please use the fix button that will appear.",
+          {
+            id: "creator-needs-fix",
+            duration: 15000,
           }
         );
-        
+
         setIsCreator(false); // Set to false until manually fixed
-        
       } else {
         console.log("ℹ️ User is not a creator");
         setNeedsRegistrationFix(false);
         setIsCreator(false);
       }
-
     } catch (error: any) {
       console.error("❌ Error checking creator status:", error);
       setIsCreator(false);
@@ -261,23 +272,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     try {
       setIsCheckingCreator(true);
-      toast.loading("🔧 Fixing your creator registration...", { id: 'manual-fix' });
-      
+      toast.loading("🔧 Fixing your creator registration...", {
+        id: "manual-fix",
+      });
+
       console.log("🔧 Starting manual fix for:", user.addr);
-      
+
       // Run the fix with better timeout
-      const fixResult = await Promise.race([
+      const fixResult = (await Promise.race([
         fixExistingCreator(),
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Transaction timeout - please try again and approve the wallet popup')), 60000)
-        )
-      ]) as any;
-      
+        new Promise((_, reject) =>
+          setTimeout(
+            () =>
+              reject(
+                new Error(
+                  "Transaction timeout - please try again and approve the wallet popup"
+                )
+              ),
+            60000
+          )
+        ),
+      ])) as any;
+
       console.log("✅ Manual fix completed:", fixResult);
-      
+
       // Wait for blockchain to update
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       // Re-check registration
       const isNowRegistered = await fcl.query({
         cadence: `
@@ -292,65 +313,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (isNowRegistered) {
         console.log("🎉 Creator registration fixed successfully!");
-        toast.success("🎉 Creator registration fixed! Refreshing...", { id: 'manual-fix' });
+        toast.success("🎉 Creator registration fixed! Refreshing...", {
+          id: "manual-fix",
+        });
         setIsCreator(true);
         setNeedsRegistrationFix(false);
-        
+
         // Refresh the page to show all creators
         setTimeout(() => {
           window.location.reload();
         }, 2000);
-        
       } else {
         console.error("❌ Fix attempt failed - still not registered");
-        toast.error("❌ Failed to fix registration - please try again", { id: 'manual-fix' });
+        toast.error("❌ Failed to fix registration - please try again", {
+          id: "manual-fix",
+        });
       }
-      
     } catch (error: any) {
       console.error("❌ Error during manual fix:", error);
-      
-      if (error.message?.includes('User rejected') || error.message?.includes('cancelled')) {
-        toast.error("❌ Transaction was cancelled - try again when ready", { id: 'manual-fix' });
-      } else if (error.message?.includes('timeout')) {
-        toast.error("❌ Transaction timed out - please approve the wallet popup faster", { id: 'manual-fix' });
+
+      if (
+        error.message?.includes("User rejected") ||
+        error.message?.includes("cancelled")
+      ) {
+        toast.error("❌ Transaction was cancelled - try again when ready", {
+          id: "manual-fix",
+        });
+      } else if (error.message?.includes("timeout")) {
+        toast.error(
+          "❌ Transaction timed out - please approve the wallet popup faster",
+          { id: "manual-fix" }
+        );
       } else {
-        toast.error(`❌ Fix failed: ${error.message}`, { id: 'manual-fix' });
+        toast.error(`❌ Fix failed: ${error.message}`, { id: "manual-fix" });
       }
-      
     } finally {
       setIsCheckingCreator(false);
     }
   };
 
   // Original checkIsCreator function (for manual checks)
-  const checkIsCreator = useCallback(async (address?: string): Promise<boolean> => {
-    const targetAddress = address || user.addr;
-    
-    if (!targetAddress) {
-      setIsCreator(false);
-      return false;
-    }
+  const checkIsCreator = useCallback(
+    async (address?: string): Promise<boolean> => {
+      const targetAddress = address || user.addr;
 
-    try {
-      const result = await fcl.query({
-        cadence: `
+      if (!targetAddress) {
+        setIsCreator(false);
+        return false;
+      }
+
+      try {
+        const result = await fcl.query({
+          cadence: `
           import FlowTip from 0x6c1b12e35dca8863
 
           access(all) fun main(userAddress: Address): Bool {
             return FlowTip.isCreatorRegistered(address: userAddress)
           }
         `,
-        args: (arg: any, t: any) => [arg(targetAddress, t.Address)],
-      });
+          args: (arg: any, t: any) => [arg(targetAddress, t.Address)],
+        });
 
-      setIsCreator(result);
-      return result;
-    } catch (error) {
-      console.error("Error checking creator:", error);
-      setIsCreator(false);
-      return false;
-    }
-  }, [user.addr]);
+        setIsCreator(result);
+        return result;
+      } catch (error) {
+        console.error("Error checking creator:", error);
+        setIsCreator(false);
+        return false;
+      }
+    },
+    [user.addr]
+  );
 
   // Refresh creator data
   const refreshCreatorData = async () => {
@@ -362,8 +395,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Get all creators from the contract
   const getAllCreators = async (): Promise<PublicCreatorInfo[]> => {
     try {
-      console.log('📋 Fetching all creators from blockchain...');
-      
+      console.log("📋 Fetching all creators from blockchain...");
+
       const creators = await fcl.query({
         cadence: `
           import FlowTip from 0x6c1b12e35dca8863
@@ -374,19 +407,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         `,
       });
 
-      console.log('✅ Fetched creators from blockchain:', creators.length);
+      console.log("✅ Fetched creators from blockchain:", creators.length);
       return creators || [];
     } catch (error) {
-      console.error('❌ Error fetching all creators:', error);
+      console.error("❌ Error fetching all creators:", error);
       return [];
     }
   };
 
   // Get top creators by tip amount
-  const getTopCreators = async (limit: number = 10): Promise<PublicCreatorInfo[]> => {
+  const getTopCreators = async (
+    limit: number = 10
+  ): Promise<PublicCreatorInfo[]> => {
     try {
-      console.log('🏆 Fetching top creators from blockchain...');
-      
+      console.log("🏆 Fetching top creators from blockchain...");
+
       const creators = await fcl.query({
         cadence: `
           import FlowTip from 0x6c1b12e35dca8863
@@ -395,22 +430,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return FlowTip.getTopCreators(limit: limit)
           }
         `,
-        args: (arg: any, t: any) => [arg(limit, t.UInt64)]
+        args: (arg: any, t: any) => [arg(limit, t.UInt64)],
       });
 
-      console.log('✅ Fetched top creators:', creators.length);
+      console.log("✅ Fetched top creators:", creators.length);
       return creators || [];
     } catch (error) {
-      console.error('❌ Error fetching top creators:', error);
+      console.error("❌ Error fetching top creators:", error);
       return [];
     }
   };
 
   // Search creators by name/description
-  const searchCreators = async (query: string): Promise<PublicCreatorInfo[]> => {
+  const searchCreators = async (
+    query: string
+  ): Promise<PublicCreatorInfo[]> => {
     try {
-      console.log('🔍 Searching creators:', query);
-      
+      console.log("🔍 Searching creators:", query);
+
       const creators = await fcl.query({
         cadence: `
           import FlowTip from 0x6c1b12e35dca8863
@@ -419,13 +456,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             return FlowTip.searchCreators(query: query)
           }
         `,
-        args: (arg: any, t: any) => [arg(query, t.String)]
+        args: (arg: any, t: any) => [arg(query, t.String)],
       });
 
-      console.log('✅ Search results:', creators.length);
+      console.log("✅ Search results:", creators.length);
       return creators || [];
     } catch (error) {
-      console.error('❌ Error searching creators:', error);
+      console.error("❌ Error searching creators:", error);
       return [];
     }
   };
@@ -433,28 +470,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Cloudinary upload function
   const uploadFile = async (
     file: File,
-    fileType: 'avatar' | 'banner'
+    fileType: "avatar" | "banner"
   ): Promise<{ success: boolean; url?: string; error?: string }> => {
     try {
       const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || 'creator-uploads');
-      
-      const response = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
-        { method: 'POST', body: formData }
+      formData.append("file", file);
+      formData.append(
+        "upload_preset",
+        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET || "creator-uploads"
       );
 
-      if (!response.ok) throw new Error('Upload failed');
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData }
+      );
+
+      if (!response.ok) throw new Error("Upload failed");
 
       const data = await response.json();
-      toast.success(`📷 ${fileType === 'avatar' ? 'Profile picture' : 'Banner'} uploaded!`);
-      
+      toast.success(
+        `📷 ${fileType === "avatar" ? "Profile picture" : "Banner"} uploaded!`
+      );
+
       return { success: true, url: data.secure_url };
-      
     } catch (error) {
-      console.error('❌ Error uploading to Cloudinary:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Upload failed';
+      console.error("❌ Error uploading to Cloudinary:", error);
+      const errorMessage =
+        error instanceof Error ? error.message : "Upload failed";
       toast.error(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -462,23 +504,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ 
-        user, 
-        logIn, 
-        logOut, 
-        isCreator, 
-        checkIsCreator, 
+      value={{
+        user,
+        logIn,
+        logOut,
+        isCreator,
+        checkIsCreator,
         isLoading,
         isCheckingCreator,
         creator,
         refreshCreatorData,
         uploadFile,
-        
+
         // Public creator queries
         getAllCreators,
         getTopCreators,
         searchCreators,
-        
+
         // 🆕 FIXED: Add the missing provider values
         needsRegistrationFix,
         runManualFix,
@@ -512,7 +554,9 @@ export function AuthGuard({
         <div className="text-center">
           <div className="h-12 w-12 rounded-full border-4 border-t-green-600 border-gray-300 animate-spin mx-auto"></div>
           <p className="mt-4 text-gray-600">
-            {isCheckingCreator ? "Checking creator status..." : "Connecting to Flow..."}
+            {isCheckingCreator
+              ? "Checking creator status..."
+              : "Connecting to Flow..."}
           </p>
         </div>
       </div>
@@ -526,7 +570,9 @@ export function AuthGuard({
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center max-w-md mx-auto p-8">
             <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-4">Authentication Required</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                Authentication Required
+              </h2>
               <p className="text-gray-600 mb-4">
                 Please connect your wallet to access this page.
               </p>
@@ -550,12 +596,14 @@ export function AuthGuard({
         <div className="min-h-screen flex items-center justify-center bg-gray-50">
           <div className="text-center max-w-md mx-auto p-8">
             <div className="bg-white rounded-lg shadow-lg p-8">
-              <h2 className="text-2xl font-bold mb-4">Creator Access Required</h2>
+              <h2 className="text-2xl font-bold mb-4">
+                Creator Access Required
+              </h2>
               <p className="text-gray-600 mb-4">
                 You need to be a registered creator to access this page.
               </p>
               <button
-                onClick={() => window.location.href = '/dashboard'}
+                onClick={() => (window.location.href = "/dashboard")}
                 className="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-lg transition-colors"
               >
                 Become a Creator

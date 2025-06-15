@@ -60,14 +60,14 @@ const config: Config = {
           "4": "hsl(var(--chart-4))",
           "5": "hsl(var(--chart-5))",
         },
-       blockchain: {
-          'dark-green': '#064e3b', // Deep green (emerald-900)
-          'green': '#065f46', // Emerald-800
-          'light-green': '#047857', // Emerald-700
-          'accent': '#10b981', // Emerald-500
-          'accent-hover': '#059669', // Emerald-600
-          'gray': '#94A3B8',
-          'light-gray': '#E2E8F0',
+        blockchain: {
+          "dark-green": "#064e3b", // Deep green (emerald-900)
+          green: "#065f46", // Emerald-800
+          "light-green": "#047857", // Emerald-700
+          accent: "#10b981", // Emerald-500
+          "accent-hover": "#059669", // Emerald-600
+          gray: "#94A3B8",
+          "light-gray": "#E2E8F0",
         },
       },
     },
@@ -100,6 +100,8 @@ const config: Config = {
     "accordion-up": "accordion-up 0.2s ease-out",
     "pulse-slow": "pulse-slow 3s ease-in-out infinite",
     float: "float 6s ease-in-out infinite",
+    "fade-in": "fade-in 0.6s ease-out forwards",
+    "pulse-glow": "pulse-glow 3s ease-in-out infinite",
   },
   backgroundImage: {
     "hero-pattern":
